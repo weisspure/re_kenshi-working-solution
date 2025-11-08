@@ -1,7 +1,7 @@
 #include <Debug.h>
 
 #include <kenshi/TitleScreen.h>
-#include <kenshi/Kenshi.h>
+#include <kenshi/Globals.h>
 #include <kenshi/GameWorld.h>
 #include <kenshi/PlayerInterface.h>
 #include <kenshi/Character.h>
@@ -13,7 +13,6 @@
 #include <mygui/MyGUI_Button.h>
 #include <mygui/MyGUI_Delegate.h>
 
-#include <MinHook/include/MinHook.h>
 #include <core/Functions.h>
 
 #define WIN32_LEAN_AND_MEAN
@@ -21,7 +20,7 @@
 
 void OnButtonPress(MyGUI::WidgetPtr sender)
 {
-    Character* selectedCharacter = Kenshi::GetGameWorld().player->selectedCharacter.getCharacter();
+    Character* selectedCharacter = ou->player->selectedCharacter.getCharacter();
     if (selectedCharacter)
     {
         Damages damage(100,100,100,100,0);
@@ -50,22 +49,7 @@ TitleScreen* TitleScreen_hook(TitleScreen* thisptr)
 
 __declspec(dllexport) void startPlugin()
 {
-    if (MH_Initialize() != MH_OK)
-    {
-        ErrorLog("KillButton: Could not initialize MinHook");
-        return;
-    }
-
-    void* titleScreenConstructorPtr = (void*)GetRealAddress(&TitleScreen::_CONSTRUCTOR);
-    if (MH_CreateHook(titleScreenConstructorPtr, &TitleScreen_hook, reinterpret_cast<LPVOID*>(&TitleScreen_orig)) != MH_OK)
-    {
-        ErrorLog("KillButton: Could not create hook");
-        return;
-    }
+    if (KenshiLib::SUCCESS != KenshiLib::AddHook(KenshiLib::GetRealAddress(&TitleScreen::_CONSTRUCTOR), TitleScreen_hook, &TitleScreen_orig))
+        ErrorLog("KillButton: Could not add hook!");
     
-    if (MH_EnableHook(titleScreenConstructorPtr) != MH_OK)
-    {
-        ErrorLog("KillButton: Could not enable hook");
-        return;
-    }
 }

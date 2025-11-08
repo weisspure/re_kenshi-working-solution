@@ -46,12 +46,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(KENSHILIB_DEPS_DIR)/MinHook/lib/;$(KENSHILIB_DIR)/Libraries;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(KENSHILIB_DIR)/Libraries;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(BOOST_INCLUDE_PATH);$(IncludePath)</IncludePath>
-    <LibraryPath>$(KENSHILIB_DEPS_DIR)/MinHook/lib/;$(KENSHILIB_DIR)/Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(KENSHILIB_DIR)/Libraries;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -63,7 +63,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kenshilib.lib;MyGUIEngine_x64.lib;libMinHook.x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kenshilib.lib;MyGUIEngine_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -80,7 +80,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kenshilib.lib;MyGUIEngine_x64.lib;libMinHook.x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kenshilib.lib;MyGUIEngine_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
