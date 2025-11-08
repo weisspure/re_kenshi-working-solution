@@ -45,12 +45,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(BOOST_INCLUDE_PATH);$(IncludePath)</IncludePath>
     <LibraryPath>$(KENSHILIB_DIR)/Libraries;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(KENSHILIB_DEPS_DIR);$(KENSHILIB_DIR)/Include;$(BOOST_INCLUDE_PATH);$(IncludePath)</IncludePath>
     <LibraryPath>$(KENSHILIB_DIR)/Libraries;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
