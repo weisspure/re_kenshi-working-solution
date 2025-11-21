@@ -14,6 +14,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PluginImport", "PluginImpor
 		{AD4E7E4A-6BCA-424C-953C-07CF3FFE6543} = {AD4E7E4A-6BCA-424C-953C-07CF3FFE6543}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WorldStates", "WorldStates\WorldStates.vcxproj", "{48EECA81-3B9C-43ED-A974-2C3142ED8C4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -36,6 +38,10 @@ Global
 		{B2E9A7F4-FF9B-408B-BD2E-BE1368ADC602}.Debug|x64.Build.0 = Debug|x64
 		{B2E9A7F4-FF9B-408B-BD2E-BE1368ADC602}.Release|x64.ActiveCfg = Release|x64
 		{B2E9A7F4-FF9B-408B-BD2E-BE1368ADC602}.Release|x64.Build.0 = Release|x64
+		{48EECA81-3B9C-43ED-A974-2C3142ED8C4E}.Debug|x64.ActiveCfg = Debug|x64
+		{48EECA81-3B9C-43ED-A974-2C3142ED8C4E}.Debug|x64.Build.0 = Debug|x64
+		{48EECA81-3B9C-43ED-A974-2C3142ED8C4E}.Release|x64.ActiveCfg = Release|x64
+		{48EECA81-3B9C-43ED-A974-2C3142ED8C4E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
