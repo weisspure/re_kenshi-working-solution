@@ -1,0 +1,19 @@
+// enum itemType { VARIABLE=1000 }
+[VARIABLE]
+value:                 0
+
+[FCS_LAYOUT]
+Variables: VARIABLE
+
+[DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
+variable equals:       VARIABLE(0) "checks the value of a variable"
+variable less than:    VARIABLE(0) "checks if a variable is less than some value"
+variable greater than: VARIABLE(0) "checks if a variable is greater than some value"
+set variable:          VARIABLE(0) "sets the value of a variable"
+add to variable:       VARIABLE(0) "adds the value to a variable (value can also be negative)"
+
+[WORLD_EVENT_STATE] 
+variable equals:       VARIABLE(1) "checks the value of a variable"
+variables equal:       VARIABLE (1) "checks the value of a variable"
+variable less than:    VARIABLE(1) "checks if a variable is less than some value"
+variable greater than: VARIABLE(1) "checks if a variable is greater than some value"
