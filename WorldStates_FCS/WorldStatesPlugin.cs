@@ -13,22 +13,9 @@ namespace WorldStates_FCS
 
 		public int Init(Assembly assembly)
 		{
-
-			Console.WriteLine("TESAT");
 			Harmony harmony = new Harmony("WorldStates_FCS");
-
 			harmony.PatchAll();
-			/*
-			MethodInfo enumToStringPrefix = typeof(WorldStatesPlugin).GetMethod("Enum_ToString_Prefix")
-				;//.MakeGenericMethod(AccessTools.TypeByName("forgotten_construction_set.itemType"));
-			Console.WriteLine(enumToStringPrefix);
 
-
-			MethodInfo Enum_ToString = typeof(Enum).Method("ToString");
-			Console.WriteLine(Enum_ToString);
-
-			harmony.Patch(Enum_ToString, new HarmonyMethod(enumToStringPrefix));
-			*/
 			Console.WriteLine("WorldStates plugin loaded.");
 			return 0;
 		}
@@ -49,8 +36,8 @@ namespace WorldStates_FCS
 		public static bool Enum_TryParse_itemType<T>(string value, out T result) where T : struct
 		{
 			// we have to set the value regardless so always do it
-			result = (T)Enum.ToObject(AccessTools.TypeByName("forgotten_construction_set.itemType"), 1000);
-			Console.WriteLine(value);
+			result = (T)Enum.ToObject(AccessTools.TypeByName("forgotten_construction_set.itemType"), itemType_extended.VARIABLE);
+
 			if (value == "VARIABLE")
 				return true;
 
@@ -59,7 +46,7 @@ namespace WorldStates_FCS
 						.Where(method => method.Name == "TryParse" && method.GetParameters().Length == 2).First()
 						.MakeGenericMethod(AccessTools.TypeByName("forgotten_construction_set.itemType"));
 
-			return Enum.TryParse(value, out result);//(bool)Enum_TryParse.Invoke(null, new object[] { value, result });
+			return Enum.TryParse(value, out result);
 		}
 
 		// generics in Harmony are completely fucked so we patch the caller IL to redirect calls instead of hooking the called function
