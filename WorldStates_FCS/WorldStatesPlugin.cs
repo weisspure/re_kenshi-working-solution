@@ -19,19 +19,6 @@ namespace WorldStates_FCS
 			Console.WriteLine("WorldStates plugin loaded.");
 			return 0;
 		}
-
-		// patch to allow merging of FCS layout sections
-		[HarmonyPatch("forgotten_construction_set.navigation", "clearCategories")]
-		public static class navigation_clearCategories_Patch
-		{
-			[HarmonyPrefix]
-			static bool Prefix()
-			{
-				// drop ClearCategories calls so layout sections are merged together
-				return false;
-			}
-		}
-		
 		// generic so we can set the correct arg type without statically linking to the FCS, which breaks simultaneous Steam + GOG compatibility
 		public static bool Enum_TryParse_itemType<T>(string value, out T result) where T : struct
 		{
@@ -105,24 +92,5 @@ namespace WorldStates_FCS
 				return instructions;
 			}
 		}
-
-		// make enum name show up correctly in UI
-		[HarmonyPatch(typeof(Enum), "ToString", new Type[] { })]
-		public static class itemType_ToString_Patch
-		{
-			[HarmonyPrefix]
-			static bool Prefix(Enum __instance, ref string __result)
-			{
-				if (__instance.GetType() == AccessTools.TypeByName("forgotten_construction_set.itemType")
-					&& (int)(object)__instance == (int)itemType_extended.VARIABLE)
-				{
-					// override value
-					__result = "VARIABLE";
-					return false;
-				}
-				return true;
-			}
-		}
-		
 	}
 }
