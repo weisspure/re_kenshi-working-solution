@@ -14,9 +14,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PluginImport", "PluginImpor
 		{AD4E7E4A-6BCA-424C-953C-07CF3FFE6543} = {AD4E7E4A-6BCA-424C-953C-07CF3FFE6543}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dialogue", "Dialogue\Dialogue.vcxproj", "{23AA5611-75D0-40D5-AF22-97F4BF533711}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WorldStates", "WorldStates\WorldStates.vcxproj", "{48EECA81-3B9C-43ED-A974-2C3142ED8C4E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorldStates_FCS", "WorldStates_FCS\WorldStates_FCS.csproj", "{C5DF77E7-C043-4811-946F-FB710AE96E6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dialogue_FCS", "Dialogue_FCS\Dialogue_FCS.csproj", "{7C798466-2F92-4A8F-8E19-761B3ACCD202}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,6 +74,14 @@ Global
 		{C5DF77E7-C043-4811-946F-FB710AE96E6F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C5DF77E7-C043-4811-946F-FB710AE96E6F}.Release|x64.ActiveCfg = Release|Any CPU
 		{C5DF77E7-C043-4811-946F-FB710AE96E6F}.Release|x64.Build.0 = Release|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Debug|x64.Build.0 = Debug|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|x64.ActiveCfg = Release|Any CPU
+		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
