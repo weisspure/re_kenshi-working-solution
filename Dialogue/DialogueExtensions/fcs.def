@@ -1,0 +1,14 @@
+enum DialogConditionEnum { }
+enum DialogConditionEnum { 
+	DC_IS_SLEEPING=1000, 
+	DC_HAS_SHORT_TERM_TAG, 
+	DC_IS_ALLY_BECAUSE_OF_DISGUISE, 
+	DC_STAT_LEVEL_UNMODIFIED, 
+	DC_STAT_LEVEL_MODIFIED,
+	DC_WEAPON_LEVEL,
+	DC_ARMOUR_LEVEL 
+}
+
+[DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
+take item:            ITEM (1) "action: take item from the target and place it in our inventory (or on the ground if there's no space)."
+destroy item:         ITEM (1) "action: take an item from the target and destroy it."
