@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FCS_extended_plugin" Version="0.0.1" />
+    <PackageReference Include="BFrizzleFoShizzle.FCS_extended.Plugin" Version="1.0.0" />
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
   </ItemGroup>
 
