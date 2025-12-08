@@ -1,5 +1,5 @@
 ## Dialogue Extensions plugin
-This plugin adds new dialogue conditions and effects. Also shows accessing GameData information created in the FCS. This mod also has a corresponding FCS_extended plugin.
+This plugin adds new dialogue conditions and effects. Also shows accessing GameData information created in the FCS. This mod also has a corresponding FCS_extended plugin `Dialogue_FCS`.
 
 Conditions that require accessing tags or character data are implemented in `DialogLineData::checkTags()`.
 
