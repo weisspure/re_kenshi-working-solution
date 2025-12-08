@@ -1,5 +1,5 @@
 ## Dialogue Extensions plugin
-This plugin adds new dialogue conditions and effects. Also shows accessing GameData information created in the FCS.
+This plugin adds new dialogue conditions and effects. Also shows accessing GameData information created in the FCS. This mod also has a corresponding FCS_extended plugin.
 
 Conditions that require accessing tags or character data are implemented in `DialogLineData::checkTags()`.
 
@@ -30,6 +30,8 @@ Compile.
 Copy `KenshiLib_Examples/Dialogue/DialogueExtensions/` to `[Kenshi install dir]/mods/DialogueExtensions/`
 
 Copy `KenshiLib_Examples/x64/Release/Dialogue.dll` to `[Kenshi install dir]/mods/DialogueExtensions/Dialogue.dll`
+
+Copy `KenshiLib_Examples/Dialogue_FCS/bin/Release/net4.8/Dialogue_FCS.dll` to `[Kenshi install dir]/mods/DialogueExtensions/Dialogue_FCS.dll`
 
 ![Image](https://github.com/user-attachments/assets/cd5c09fd-643d-42d2-8eab-37680645df9e)
 
