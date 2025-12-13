@@ -21,59 +21,95 @@ enum ExtendedDialogConditionEnum
 	DC_ARMOUR_LEVEL
 };
 
-bool (*_checkCondition_orig)(Dialogue* thisptr, DialogConditionEnum conditionName, ComparisonEnum compareBy, int val, Character* target, Character* actualConversationTarget);
-bool _checkCondition_hook(Dialogue* thisptr, DialogConditionEnum conditionName, ComparisonEnum compareBy, int val, Character* target, Character* actualConversationTarget)
+// TODO remove?
+static bool DialogCompare(int val1, int val2, ComparisonEnum compareBy)
 {
-	if (conditionName == DC_IS_SLEEPING)
-	{
-		return ((val > 0) == (actualConversationTarget->inSomething == UseStuffState::IN_BED));
-	}
-	else if (conditionName == DC_IS_ALLY_BECAUSE_OF_DISGUISE)
-	{
-		bool checkTrue = (compareBy == ComparisonEnum::CE_EQUALS && val == 1)
-			|| (compareBy == ComparisonEnum::CE_MORE_THAN && val == 0);
-		// "if ally factoring disguise and not ally not factoring disguise"
-		return checkTrue == (target->isAlly(actualConversationTarget, true) && !target->isAlly(actualConversationTarget, false));
-	}
-	else if (conditionName == DC_WEAPON_LEVEL)
-	{
-		Weapon* weapon = actualConversationTarget->getCurrentWeapon();
-		if (weapon != nullptr)
-		{
-			if (compareBy == ComparisonEnum::CE_EQUALS && weapon->getLevel() == val)
-				return true;
-			if (compareBy == ComparisonEnum::CE_LESS_THAN && weapon->getLevel() < val)
-				return true;
-			if (compareBy == ComparisonEnum::CE_MORE_THAN && weapon->getLevel() > val)
-				return true;
 
+	if (compareBy == ComparisonEnum::CE_EQUALS && val1 == val2)
+		return true;
+	if (compareBy == ComparisonEnum::CE_LESS_THAN && val1 < val2)
+		return true;
+	if (compareBy == ComparisonEnum::CE_MORE_THAN && val1 > val2)
+		return true;
+
+	return false;
+}
+
+static bool DialogCompare(int val1, DialogLineData::DialogCondition* condition)
+{
+
+	if (condition->key == ComparisonEnum::CE_EQUALS && val1 == condition->value)
+		return true;
+	if (condition->key == ComparisonEnum::CE_LESS_THAN && val1 < condition->value)
+		return true;
+	if (condition->key == ComparisonEnum::CE_MORE_THAN && val1 > condition->value)
+		return true;
+
+	return false;
+}
+
+bool (*DialogLineData_checkConditions_orig)(DialogLineData* thisptr, Dialogue* dialog, Character* target, bool isWordswap);
+bool DialogLineData_checkConditions_hook(DialogLineData* thisptr, Dialogue* dialog, Character* target, bool isWordswap)
+{
+	for (DialogLineData::DialogCondition** condition = thisptr->conditions.begin(); condition < thisptr->conditions.end(); ++condition)
+	{
+		// T_ME behaviour - do I have memory tag for target
+		Character* characterTarget = dialog->getCharacter();
+		Character* characterCheck = dialog->getConversationTarget().getCharacter();
+
+		if ((*condition)->who != TalkerEnum::T_ME)
+		{
+			// swap
+			Character* temp = characterTarget;
+			characterTarget = characterCheck;
+			characterCheck = temp;
 		}
 
-		return false;
-	}
-	else if (conditionName == DC_ARMOUR_LEVEL)
-	{
-		lektor<Item*> armour;
-		armour.maxSize = 0;
-		armour.count = 0;
-		armour.stuff = nullptr;
-		actualConversationTarget->getInventory()->getEquippedArmour(armour);
-		for (int i = 0; i < armour.size(); ++i)
+		switch ((*condition)->key)
 		{
-			if (compareBy == ComparisonEnum::CE_EQUALS && armour[i]->getLevel() == val)
-				return true;
-			if (compareBy == ComparisonEnum::CE_LESS_THAN && armour[i]->getLevel() < val)
-				return true;
-			if (compareBy == ComparisonEnum::CE_MORE_THAN && armour[i]->getLevel() > val)
-				return true;
+			case DC_IS_SLEEPING:
+				if (!DialogCompare(characterTarget->inSomething == UseStuffState::IN_BED, *condition))
+					return false;
+				break;
+			case DC_IS_ALLY_BECAUSE_OF_DISGUISE:
+				if (!DialogCompare((characterCheck->isAlly(characterTarget, true) && !characterCheck->isAlly(characterTarget, false)), *condition))
+					return false;
+				break;
+			case DC_WEAPON_LEVEL:
+			{
+				// Note: value is -1 if unarmed
+				Weapon* weapon = characterTarget->getCurrentWeapon();
+				int level = weapon == nullptr ? -1 : weapon->getLevel();
+				if (!DialogCompare(level, *condition))
+					return false;
+				break;
+			}
+			case DC_ARMOUR_LEVEL:
+			{
+				// Note: value is -1 if unarmoured
+				lektor<Item*> armour;
+				armour.maxSize = 0;
+				armour.count = 0;
+				armour.stuff = nullptr;
+				characterTarget->getInventory()->getEquippedArmour(armour);
+				bool hasMatch = false;
+				// check if any equipped armour meets condition
+				for (int i = 0; i < armour.size(); ++i)
+					if (DialogCompare(armour[i]->getLevel(), *condition))
+						hasMatch = true;
+				// unarmoured
+				if (armour.size() == 0)
+					hasMatch = DialogCompare(-1, *condition);
+				// garbage collect
+				free(armour.stuff);
+				// return false if no armour matches
+				if (!hasMatch)
+					return false;
+				break;
+			}
 		}
-
-		// garbage collect
-		free(armour.stuff);
-
-		return false;
 	}
-	return _checkCondition_orig(thisptr, conditionName, compareBy, val, target, actualConversationTarget);
+	return DialogLineData_checkConditions_orig(thisptr, dialog, target, isWordswap);
 }
 
 bool (*checkTags_orig)(DialogLineData* thisptr, Character* me, Character* target);
@@ -81,6 +117,7 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 {
 	for (int i = 0; i < thisptr->conditions.size(); ++i)
 	{
+		// optimization - only do a full check if there's an actual extended condition
 		if (thisptr->conditions[i]->key == ExtendedDialogConditionEnum::DC_HAS_SHORT_TERM_TAG
 			|| thisptr->conditions[i]->key == DC_STAT_LEVEL_UNMODIFIED
 			|| thisptr->conditions[i]->key == DC_STAT_LEVEL_MODIFIED)
@@ -92,26 +129,26 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 				for (int i = 0; i < iter->second.size(); ++i)
 				{
 					ExtendedDialogConditionEnum dialogCondition = (ExtendedDialogConditionEnum)iter->second[i].ptr->idata.find("condition name")->second;
+					ComparisonEnum compareBy = (ComparisonEnum)iter->second[i].ptr->idata.find("compare by")->second;
+					TalkerEnum who = (TalkerEnum)iter->second[i].ptr->idata.find("who")->second;
+					int tag = iter->second[i].ptr->idata.find("tag")->second;
+					int value = iter->second[i].values[0];
+
+					// T_ME behaviour - do I have tag for target
+					Character* conditionTarget = me;
+					Character* conditionCheck = target;
+					if (who != TalkerEnum::T_ME)
+					{
+						// swap
+						Character* temp = conditionTarget;
+						conditionTarget = conditionCheck;
+						conditionCheck = temp;
+					}
+
 					if (dialogCondition == ExtendedDialogConditionEnum::DC_HAS_SHORT_TERM_TAG)
 					{
-						TalkerEnum who = (TalkerEnum)iter->second[i].ptr->idata.find("who")->second;
-						// T_ME behaviour - do I have memory tag for target
-						Character* conditionTarget = me;
-						Character* conditionCheck = target;
-						if (who != TalkerEnum::T_ME)
-						{
-							// swap
-							Character* temp = conditionTarget;
-							conditionTarget = conditionCheck;
-							conditionCheck = temp;
-						}
-
-						//ComparisonEnum compareBy = (ComparisonEnum)iter->second[i].ptr->idata.find("compare by")->second;
-						int tag = iter->second[i].ptr->idata.find("tag")->second;
-						if ((thisptr->conditions[i]->value > 0) != conditionTarget->getCharacterMemoryTag(conditionCheck, (CharacterPerceptionTags_ShortTerm)tag))
-						{
+						if(!DialogCompare(conditionTarget->getCharacterMemoryTag(conditionCheck, (CharacterPerceptionTags_ShortTerm)tag), value, compareBy))
 							return false;
-						}
 					}
 					// both of these can be done together
 					else if (dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_MODIFIED
@@ -119,26 +156,15 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 					{
 						// swap between enum behaviour
 						bool unmodified = dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_UNMODIFIED;
-						
-						TalkerEnum who = (TalkerEnum)iter->second[i].ptr->idata.find("who")->second;
-						Character* conditionTarget = target;
-						if (who == TalkerEnum::T_ME)
-							conditionTarget = me;
 
-						ComparisonEnum compareBy = (ComparisonEnum)iter->second[i].ptr->idata.find("compare by")->second;
-						int value = iter->second[i].values[0];
-						int tag = iter->second[i].ptr->idata.find("tag")->second;
 						float stat = conditionTarget->getStats()->getStat((StatsEnumerated)tag, unmodified);
-
-						if (compareBy == ComparisonEnum::CE_EQUALS && !((int)stat == value))
-							return false;
-						if (compareBy == ComparisonEnum::CE_LESS_THAN && !((int)stat < value))
-							return false;
-						if (compareBy == ComparisonEnum::CE_MORE_THAN && !((int)stat > value))
+						if(!DialogCompare((int)stat, value, compareBy));
 							return false;
 					}
 				}
 			}
+			// above loop should check all conditions
+			break;
 		}
 	}
 	return checkTags_orig(thisptr, me, target);
@@ -210,7 +236,7 @@ void _doActions_hook(Dialogue* thisptr, DialogLineData* dialogLine)
 
 __declspec(dllexport) void startPlugin()
 {
-	if (KenshiLib::SUCCESS != KenshiLib::AddHook(KenshiLib::GetRealAddress(&Dialogue::_checkCondition), &_checkCondition_hook, &_checkCondition_orig))
+	if (KenshiLib::SUCCESS != KenshiLib::AddHook(KenshiLib::GetRealAddress(&DialogLineData::checkConditions), &DialogLineData_checkConditions_hook, &DialogLineData_checkConditions_orig))
 		ErrorLog("Dialogue Extensions: could not install hook!");
 	if(KenshiLib::SUCCESS != KenshiLib::AddHook(KenshiLib::GetRealAddress(&DialogLineData::checkTags), &checkTags_hook, &checkTags_orig))
 		ErrorLog("Dialogue Extensions: could not install hook!");
