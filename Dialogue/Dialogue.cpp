@@ -38,11 +38,11 @@ static bool DialogCompare(int val1, int val2, ComparisonEnum compareBy)
 static bool DialogCompare(int val1, DialogLineData::DialogCondition* condition)
 {
 
-	if (condition->key == ComparisonEnum::CE_EQUALS && val1 == condition->value)
+	if (condition->compareBy == ComparisonEnum::CE_EQUALS && val1 == condition->value)
 		return true;
-	if (condition->key == ComparisonEnum::CE_LESS_THAN && val1 < condition->value)
+	if (condition->compareBy == ComparisonEnum::CE_LESS_THAN && val1 < condition->value)
 		return true;
-	if (condition->key == ComparisonEnum::CE_MORE_THAN && val1 > condition->value)
+	if (condition->compareBy == ComparisonEnum::CE_MORE_THAN && val1 > condition->value)
 		return true;
 
 	return false;
