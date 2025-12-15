@@ -405,117 +405,19 @@ void _doActions_hook(Dialogue* thisptr, DialogLineData* dialogLine)
 	ogre_unordered_map<std::string, Ogre::vector<GameDataReference>::type>::type::iterator iter = dialogLine->getGameData()->objectReferences.find("take item");
 	if (iter != dialogLine->getGameData()->objectReferences.end())
 		doRefAction("take item", iter->second, thisptr);
-	/*
-	if (iter->second.size() == 0)
-	{
-		ErrorLog("Missing references for \"take item\"");
-	}
-
-	for (Ogre::vector<GameDataReference>::type::iterator itemIter = iter->second.begin(); itemIter != iter->second.end(); ++itemIter)
-	{
-		Character* giver = thisptr->getConversationTarget().getCharacter();
-		Character* taker = thisptr->me;
-		if (giver != nullptr && taker != nullptr)
-		{
-			for (int i = 0; i < itemIter->values[0]; ++i)
-			{
-				Item* item = giver->inventory->getItem(itemIter->ptr);
-
-				// stop when the character no longer has instances of the item
-				if (item == nullptr)
-					break;
-
-				giver->dropItem(item);
-				taker->giveItem(item, true, false);
-			}
-		}
-	}
-	*/
-
+	
 	iter = dialogLine->getGameData()->objectReferences.find("take item from squad");
 	if (iter != dialogLine->getGameData()->objectReferences.end())
 		doRefAction("take item from squad", iter->second, thisptr);
-	/*
-	{
-		if (iter->second.size() == 0)
-		{
-			ErrorLog("Missing references for \"take item\"");
-		}
-		
-		for (Ogre::vector<GameDataReference>::type::iterator itemIter = iter->second.begin(); itemIter != iter->second.end(); ++itemIter)
-		{
-			Character* giver = thisptr->getConversationTarget().getCharacter();
-			Character* taker = thisptr->me;
-
-			if (giver != nullptr && taker != nullptr)
-			{
-				ActivePlatoon* activePlatoon = giver->getPlatoon();
-				lektor<RootObject*> characters;
-				// couldn't find T_WHOLE_SQUAD radius but interjection radius is similar and appears to be 900
-				activePlatoon->getCharactersInArea(characters, taker->getPosition(), SQUAD_CHECK_RADIUS, false);
-
-				int itemsLeft = itemIter->values[0];
-				for (int c = 0; c < characters.size(); ++c)
-				{
-					Character* squadChar = dynamic_cast<Character*>(characters[c]);
-					if (squadChar)
-					{
-						for (int i = 0; i < itemsLeft; ++i)
-						{
-							Item* item = squadChar->inventory->getItem(itemIter->ptr);
-
-							// stop when the character no longer has instances of the item
-							if (item == nullptr)
-								break;
-
-							giver->dropItem(item);
-							taker->giveItem(item, true, false);
-						}
-					}
-				}
-			}
-		}
-	}
-	*/
+	
 	iter = dialogLine->getGameData()->objectReferences.find("destroy item");
 	if (iter != dialogLine->getGameData()->objectReferences.end())
 		doRefAction("destroy item", iter->second, thisptr);
-
 
 	iter = dialogLine->getGameData()->objectReferences.find("destroy item from squad");
 	if (iter != dialogLine->getGameData()->objectReferences.end())
 		doRefAction("destroy item from squad", iter->second, thisptr);
 
-	/*
-	iter = dialogLine->getGameData()->objectReferences.find("destroy item");
-	if (iter != dialogLine->getGameData()->objectReferences.end())
-	{
-		if (iter->second.size() == 0)
-		{
-			ErrorLog("Missing references for \"destroy item\"");
-		}
-
-		for (Ogre::vector<GameDataReference>::type::iterator itemIter = iter->second.begin(); itemIter != iter->second.end(); ++itemIter)
-		{
-			Character* target = thisptr->getConversationTarget().getCharacter();
-			if (target != nullptr)
-			{
-				for (int i = 0; i < itemIter->values[0]; ++i)
-				{
-					Item* item = target->inventory->getItem(itemIter->ptr);
-
-					// stop when the character no longer has instances of the item
-					if (item == nullptr)
-						break;
-
-					// get rid of inventory references or something, no idea if this is needed but it seems like a good idea
-					target->dropItem(item);
-					ou->destroy(item, false, "Destroy item event");
-				}
-			}
-		}
-	}
-	*/
 	// continue
 	_doActions_orig(thisptr, dialogLine);
 }
