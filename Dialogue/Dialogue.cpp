@@ -9,6 +9,7 @@
 #include <kenshi/GameWorld.h>
 #include <kenshi/Globals.h>
 #include <kenshi/RootObjectFactory.h>
+#include <kenshi/Platoon.h>
 
 enum ExtendedDialogConditionEnum
 {
@@ -20,6 +21,8 @@ enum ExtendedDialogConditionEnum
 	DC_WEAPON_LEVEL,
 	DC_ARMOUR_LEVEL
 };
+
+static const float SQUAD_CHECK_RADIUS = 900.0f;
 
 // TODO remove?
 static bool DialogCompare(int val1, int val2, ComparisonEnum compareBy)
@@ -48,16 +51,85 @@ static bool DialogCompare(int val1, DialogLineData::DialogCondition* condition)
 	return false;
 }
 
+static bool checkCondition(Character* characterCheck, Character* characterTarget, DialogLineData::DialogCondition* condition)
+{
+	switch (condition->key)
+	{
+		case DC_IS_SLEEPING:
+			if (!DialogCompare(characterCheck->inSomething == UseStuffState::IN_BED, condition))
+				return false;
+			break;
+		case DC_IS_ALLY_BECAUSE_OF_DISGUISE:
+			if (!DialogCompare((characterCheck->isAlly(characterTarget, true) && !characterCheck->isAlly(characterTarget, false)), condition))
+				return false;
+			break;
+		case DC_WEAPON_LEVEL:
+		{
+			// Note: value is -1 if unarmed
+			// this check often doesn't check equipped weapons on back
+			Weapon* weapon = characterCheck->getCurrentWeapon();
+			// this seems to be the same
+			if(!weapon)
+				weapon = characterCheck->getThePreferredWeapon();
+			int level = weapon == nullptr ? -1 : weapon->getLevel();
+			if (!weapon)
+			{
+				lektor<InventorySection*> sections;
+				characterCheck->inventory->getAllSectionsOfType(sections, AttachSlot::ATTACH_WEAPON);
+				for (int i = 0; i < sections.size(); ++i)
+				{
+					const Ogre::vector<InventorySection::SectionItem>::type& items = sections[i]->getItems();
+					for (int j = 0; j < items.size(); ++j)
+						if (weapon = dynamic_cast<Weapon*>(items[j].item))
+							level = std::max(level, weapon->getLevel());
+				}
+
+				// cleanup
+				free(sections.stuff);
+			}
+			
+			if (!DialogCompare(level, condition))
+				return false;
+			break;
+		}
+		case DC_ARMOUR_LEVEL:
+		{
+			// Note: value is -1 if unarmoured
+			lektor<Item*> armour;
+			armour.maxSize = 0;
+			armour.count = 0;
+			armour.stuff = nullptr;
+			characterCheck->getInventory()->getEquippedArmour(armour);
+			bool hasMatch = false;
+			// check if any equipped armour meets condition
+			for (int i = 0; i < armour.size(); ++i)
+				if (DialogCompare(armour[i]->getLevel(), condition))
+					hasMatch = true;
+			// unarmoured
+			if (armour.size() == 0)
+				hasMatch = DialogCompare(-1, condition);
+			// garbage collect
+			if (armour.stuff)
+				free(armour.stuff);
+			// return false if no armour matches
+			if (!hasMatch)
+				return false;
+			break;
+		}
+	}
+	return true;
+}
+
 bool (*DialogLineData_checkConditions_orig)(DialogLineData* thisptr, Dialogue* dialog, Character* target, bool isWordswap);
 bool DialogLineData_checkConditions_hook(DialogLineData* thisptr, Dialogue* dialog, Character* target, bool isWordswap)
 {
 	for (DialogLineData::DialogCondition** condition = thisptr->conditions.begin(); condition < thisptr->conditions.end(); ++condition)
 	{
 		// T_ME behaviour - do I have memory tag for target
-		Character* characterTarget = dialog->getCharacter();
-		Character* characterCheck = dialog->getConversationTarget().getCharacter();
-
-		if ((*condition)->who != TalkerEnum::T_ME)
+		Character* characterCheck = dialog->getCharacter();
+		Character* characterTarget = target;
+		
+		if ((*condition)->who != TalkerEnum::T_ME && (*condition)->who != TalkerEnum::T_WHOLE_SQUAD)
 		{
 			// swap
 			Character* temp = characterTarget;
@@ -65,51 +137,74 @@ bool DialogLineData_checkConditions_hook(DialogLineData* thisptr, Dialogue* dial
 			characterCheck = temp;
 		}
 
-		switch ((*condition)->key)
+		if (!characterCheck)
 		{
-			case DC_IS_SLEEPING:
-				if (!DialogCompare(characterTarget->inSomething == UseStuffState::IN_BED, *condition))
-					return false;
-				break;
-			case DC_IS_ALLY_BECAUSE_OF_DISGUISE:
-				if (!DialogCompare((characterCheck->isAlly(characterTarget, true) && !characterCheck->isAlly(characterTarget, false)), *condition))
-					return false;
-				break;
-			case DC_WEAPON_LEVEL:
+			ErrorLog("NO SPEAKER");
+			break;
+		}
+
+		if (!characterTarget)
+		{
+			ErrorLog("NO TARGET");
+		}
+
+		if ((*condition)->who == TalkerEnum::T_WHOLE_SQUAD)
+		{
+			// with above branch, characterCheck will be "me"
+			ActivePlatoon* activePlatoon = characterCheck->getPlatoon();
+			lektor<RootObject*> characters;
+			// couldn't find T_WHOLE_SQUAD radius but interjection radius is similar and appears to be 900
+			activePlatoon->getCharactersInArea(characters, characterCheck->getPosition(), SQUAD_CHECK_RADIUS, false);
+
+			// if any
+			bool found = false;
+			for (int i = 0; i < characters.size(); ++i)
 			{
-				// Note: value is -1 if unarmed
-				Weapon* weapon = characterTarget->getCurrentWeapon();
-				int level = weapon == nullptr ? -1 : weapon->getLevel();
-				if (!DialogCompare(level, *condition))
-					return false;
-				break;
+				Character* squadChar = dynamic_cast<Character*>(characters[i]);
+				if (squadChar)
+				{
+					if (checkCondition(squadChar, characterTarget, *condition))
+						// condition is met -  move on to the next condition
+						found = true;
+						//break;
+				}
 			}
-			case DC_ARMOUR_LEVEL:
-			{
-				// Note: value is -1 if unarmoured
-				lektor<Item*> armour;
-				armour.maxSize = 0;
-				armour.count = 0;
-				armour.stuff = nullptr;
-				characterTarget->getInventory()->getEquippedArmour(armour);
-				bool hasMatch = false;
-				// check if any equipped armour meets condition
-				for (int i = 0; i < armour.size(); ++i)
-					if (DialogCompare(armour[i]->getLevel(), *condition))
-						hasMatch = true;
-				// unarmoured
-				if (armour.size() == 0)
-					hasMatch = DialogCompare(-1, *condition);
-				// garbage collect
-				free(armour.stuff);
-				// return false if no armour matches
-				if (!hasMatch)
-					return false;
-				break;
-			}
+
+			// cleanup
+			if (characters.stuff)
+				free(characters.stuff);
+
+			if (!found)
+				return false;
+		}
+		else
+		{
+			if (!checkCondition(characterCheck, characterTarget, *condition))
+				return false;
 		}
 	}
 	return DialogLineData_checkConditions_orig(thisptr, dialog, target, isWordswap);
+}
+
+bool checkTag(ExtendedDialogConditionEnum dialogCondition, Character* conditionCheck, Character* conditionTarget, ComparisonEnum compareBy, int tag, int value)
+{
+	if (dialogCondition == ExtendedDialogConditionEnum::DC_HAS_SHORT_TERM_TAG)
+	{
+		return DialogCompare(conditionCheck->getCharacterMemoryTag(conditionTarget, (CharacterPerceptionTags_ShortTerm)tag), value, compareBy);
+	}
+	// both of these can be done together
+	else if (dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_MODIFIED
+		|| dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_UNMODIFIED)
+	{
+		// swap between enum behaviour
+		bool unmodified = dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_UNMODIFIED;
+
+		float stat = conditionCheck->getStats()->getStat((StatsEnumerated)tag, unmodified);
+		return DialogCompare((int)stat, value, compareBy);
+	}
+
+	// not our problem
+	return true;
 }
 
 bool (*checkTags_orig)(DialogLineData* thisptr, Character* me, Character* target);
@@ -135,9 +230,10 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 					int value = iter->second[i].values[0];
 
 					// T_ME behaviour - do I have tag for target
-					Character* conditionTarget = me;
-					Character* conditionCheck = target;
-					if (who != TalkerEnum::T_ME)
+					Character* conditionCheck = me;
+					// Note: target can sometimes be null, seems to happen on interjection nodes
+					Character* conditionTarget = target;
+					if (who != TalkerEnum::T_ME && who != TalkerEnum::T_WHOLE_SQUAD)
 					{
 						// swap
 						Character* temp = conditionTarget;
@@ -145,20 +241,39 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 						conditionCheck = temp;
 					}
 
-					if (dialogCondition == ExtendedDialogConditionEnum::DC_HAS_SHORT_TERM_TAG)
+					if (who == TalkerEnum::T_WHOLE_SQUAD)
 					{
-						if(!DialogCompare(conditionTarget->getCharacterMemoryTag(conditionCheck, (CharacterPerceptionTags_ShortTerm)tag), value, compareBy))
-							return false;
-					}
-					// both of these can be done together
-					else if (dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_MODIFIED
-						|| dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_UNMODIFIED)
-					{
-						// swap between enum behaviour
-						bool unmodified = dialogCondition == ExtendedDialogConditionEnum::DC_STAT_LEVEL_UNMODIFIED;
+						ActivePlatoon* platoon = conditionCheck->getPlatoon();
+						if (platoon)
+						{
+							lektor<RootObject*> characters;
+							// couldn't find T_WHOLE_SQUAD radius but interjection radius is similar and appears to be 900
+							platoon->getCharactersInArea(characters, conditionCheck->getPosition(), 900.0f, false);
 
-						float stat = conditionTarget->getStats()->getStat((StatsEnumerated)tag, unmodified);
-						if(!DialogCompare((int)stat, value, compareBy));
+							bool found = false;
+							for (int i = 0; i < characters.size(); ++i)
+							{
+								Character* squadChar = dynamic_cast<Character*>(characters[i]);
+								// if any
+								if (squadChar)
+								{
+									if (checkTag(dialogCondition, squadChar, conditionTarget, compareBy, tag, value))
+										// condition is met -  move on to the next condition
+										found = true;
+								}
+							}
+
+							// cleanup
+							if (characters.stuff)
+								free(characters.stuff);
+
+							if (!found)
+								return false;
+						}
+					}
+					else
+					{
+						if (!checkTag(dialogCondition, conditionCheck, conditionTarget, compareBy, tag, value))
 							return false;
 					}
 				}
