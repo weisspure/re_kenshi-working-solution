@@ -288,30 +288,56 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 // returns num items taken
 int takeItems(Character* giver, Character* taker, GameData* itemData, int count)
 {
-	for (int i = 0; i < count; ++i)
+	int countTaken = 0;
+	while (countTaken < count)
 	{
 		Item* item = giver->inventory->getItem(itemData);
 
 		// stop when the character no longer has instances of the item
 		if (item == nullptr)
-			return i;
+			return countTaken;
+
+		const int countRemaining = count - countTaken;
+		// if stack has more items than we're removing, split and return
+		if (item->quantity > countRemaining)
+		{
+			// part of stack is moved, split by creating new instance
+			item->quantity -= countRemaining;
+			Item* newItem = ou->theFactory->copyItem(item);
+			newItem->quantity = countRemaining;
+			taker->giveItem(newItem, true, false);
+			return count;
+		}
+
+		// whole stack is moved
+		countTaken += item->quantity;
 
 		giver->dropItem(item);
 		taker->giveItem(item, true, false);
 	}
+
+	// count is reached
 	return count;
 }
 
 // returns num items destroyed
 int destroyItems(Character* target, GameData* itemData, int count)
 {
-	for (int i = 0; i < count; ++i)
+	while(true)
 	{
 		Item* item = target->inventory->getItem(itemData);
 
 		// stop when the character no longer has instances of the item
 		if (item == nullptr)
-			return i;
+			return count;
+
+		if (item->quantity > count)
+		{
+			item->quantity -= count;
+			return count;
+		}
+
+		count -= item->quantity;
 
 		// get rid of inventory references or something, no idea if this is needed but it seems like a good idea
 		target->dropItem(item);
