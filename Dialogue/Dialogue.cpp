@@ -248,7 +248,7 @@ bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 						{
 							lektor<RootObject*> characters;
 							// couldn't find T_WHOLE_SQUAD radius but interjection radius is similar and appears to be 900
-							platoon->getCharactersInArea(characters, conditionCheck->getPosition(), 900.0f, false);
+							platoon->getCharactersInArea(characters, conditionCheck->getPosition(), SQUAD_CHECK_RADIUS, false);
 
 							bool found = false;
 							for (int i = 0; i < characters.size(); ++i)
@@ -351,7 +351,7 @@ void doRefAction(const std::string &action, Ogre::vector<GameDataReference>::typ
 					{
 						Character* squadChar = dynamic_cast<Character*>(characters[c]);
 						if (squadChar)
-							itemsLeft -= takeItems(giver, taker, itemIter->ptr, itemsLeft);
+							itemsLeft -= takeItems(squadChar, taker, itemIter->ptr, itemsLeft);
 						if (itemsLeft == 0)
 							break;
 					}
@@ -386,7 +386,7 @@ void doRefAction(const std::string &action, Ogre::vector<GameDataReference>::typ
 					{
 						Character* squadChar = dynamic_cast<Character*>(characters[c]);
 						if (squadChar)
-							itemsLeft -= destroyItems(target, itemIter->ptr, itemsLeft);
+							itemsLeft -= destroyItems(squadChar, itemIter->ptr, itemsLeft);
 						if (itemsLeft == 0)
 							break;
 					}
