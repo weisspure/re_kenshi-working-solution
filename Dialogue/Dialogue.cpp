@@ -13,7 +13,8 @@
 
 enum ExtendedDialogConditionEnum
 {
-	DC_IS_SLEEPING = 1000,
+	// Note: for your own mod, please use a starting enum between 1100 and 55000 to avoid clashes
+	DC_IS_SLEEPING = 900,
 	DC_HAS_SHORT_TERM_TAG,
 	DC_IS_ALLY_BECAUSE_OF_DISGUISE,
 	DC_STAT_LEVEL_UNMODIFIED,

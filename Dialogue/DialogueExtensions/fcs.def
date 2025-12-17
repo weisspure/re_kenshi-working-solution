@@ -1,6 +1,6 @@
 enum DialogConditionEnum { }
 enum DialogConditionEnum { 
-	DC_IS_SLEEPING=1000, 
+	DC_IS_SLEEPING=900, 
 	DC_HAS_SHORT_TERM_TAG, 
 	DC_IS_ALLY_BECAUSE_OF_DISGUISE, 
 	DC_STAT_LEVEL_UNMODIFIED, 

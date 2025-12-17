@@ -1,4 +1,4 @@
-// enum itemType { VARIABLE=1000 }
+// enum itemType { VARIABLE=900 }
 [VARIABLE]
 value:                 0
 

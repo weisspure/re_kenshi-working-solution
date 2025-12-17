@@ -12,7 +12,8 @@
 
 enum itemTypeExtended
 {
-	VARIABLE = 1000
+	// Note: for your own mod, please use a starting enum between 1100 and 55000 to avoid clashes
+	VARIABLE = 900
 };
 
 // WorldEventStateQuery objects don't store a ref to their gamedata so we need this to get it in WorldEventStateQuery::isTrue

@@ -9,7 +9,7 @@ namespace WorldStates_FCS
 {
 	public class WorldStatesPlugin : IPlugin
 	{
-		private enum itemType_extended { VARIABLE=1000 };
+		private enum itemType_extended { VARIABLE=900 };
 
 		public int Init(Assembly assembly)
 		{
