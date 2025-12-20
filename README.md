@@ -1,7 +1,7 @@
 ## KenshiLib Examples
 This repo contains example KenshiLib plugins.
 
-Requires RE_Kenshi 0.3.0+. A prerelease version can be found on the [Genesis Modding Guild Discord](https://discord.com/invite/g7F6aHw) in the `#Programming` channel.
+Requires [RE_Kenshi 0.3.0+](https://www.nexusmods.com/kenshi/mods/847?tab=files) and optionally [FCS extended](https://www.nexusmods.com/kenshi/mods/1825).
 
 ## Examples
 ### Hello World
