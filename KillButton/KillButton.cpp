@@ -1,6 +1,6 @@
 #include <Debug.h>
 
-#include <kenshi/TitleScreen.h>
+#include <kenshi/gui/TitleScreen.h>
 #include <kenshi/Globals.h>
 #include <kenshi/GameWorld.h>
 #include <kenshi/PlayerInterface.h>
