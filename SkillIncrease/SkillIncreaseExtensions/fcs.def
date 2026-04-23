@@ -1,0 +1,4 @@
+enum DialogConditionEnum { }
+
+[DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
+grant skill levels: ITEM (1) "Action: grant a flat number of levels to the speaking character based on the referenced stat token."

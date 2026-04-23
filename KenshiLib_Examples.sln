@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.36422.26
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37203.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HelloWorld", "HelloWorld\HelloWorld.vcxproj", "{A6351B45-56BE-41B5-ADBF-6F046C8041FC}"
 EndProject
@@ -23,6 +23,16 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dialogue_FCS", "Dialogue_FCS\Dialogue_FCS.csproj", "{7C798466-2F92-4A8F-8E19-761B3ACCD202}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CharacterHighlight", "CharacterHighlight\CharacterHighlight.vcxproj", "{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SkillIncrease", "SkillIncrease\SkillIncrease.vcxproj", "{9FA222D5-8C29-4614-A633-6EBFDD978EE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkillIncrease_FCS", "SkillIncrease_FCS\SkillIncrease_FCS.csproj", "{6A2F6D33-F73D-7427-7835-774F9AB5B99B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		BuildSetup.md = BuildSetup.md
+		CLAUDE_RE_Kenshi_Plugin_Notes.md = CLAUDE_RE_Kenshi_Plugin_Notes.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -84,10 +94,30 @@ Global
 		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|x64.ActiveCfg = Release|Any CPU
 		{7C798466-2F92-4A8F-8E19-761B3ACCD202}.Release|x64.Build.0 = Release|Any CPU
+		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Debug|Any CPU.Build.0 = Debug|x64
 		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Debug|x64.ActiveCfg = Debug|x64
 		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Debug|x64.Build.0 = Debug|x64
+		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Release|Any CPU.ActiveCfg = Release|x64
+		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Release|Any CPU.Build.0 = Release|x64
 		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Release|x64.ActiveCfg = Release|x64
 		{D71C3ACC-33FF-4D2D-BC22-5011EE6423E7}.Release|x64.Build.0 = Release|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Debug|Any CPU.Build.0 = Debug|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Debug|x64.ActiveCfg = Debug|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Debug|x64.Build.0 = Debug|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Release|Any CPU.ActiveCfg = Release|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Release|Any CPU.Build.0 = Release|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Release|x64.ActiveCfg = Release|x64
+		{9FA222D5-8C29-4614-A633-6EBFDD978EE5}.Release|x64.Build.0 = Release|x64
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Debug|x64.Build.0 = Debug|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|x64.ActiveCfg = Release|Any CPU
+		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
