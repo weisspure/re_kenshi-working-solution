@@ -68,7 +68,7 @@ or it shows `0 KB` on disk, then you do **not** have the real `.lib`.
 
 ### Fix
 
-Install Git LFS, then from the correct repo root run:
+Install Git LFS, then from the correct repo root run the following commands. You can use **Git Bash**, **CMD**, or **PowerShell** — whichever you have been using for Git. Navigate to the root of the `KenshiLib_Examples_deps` repo before running them.
 
 ```
 git lfs install
@@ -110,9 +110,10 @@ This was a proven problem.
 
 ### What you want
 
-Both of these must be present:
+Both of these must be present and when you view them in file explorer they should have more than 0kb on disk.:
 
 ```
+# Replace ... with your Kenshi install location
 C:\...\boost_1_60_0\boost\unordered_map.hpp
 C:\...\boost_1_60_0\stage\lib\libboost_thread-vc100-mt-1_60.lib
 ```
@@ -159,12 +160,12 @@ If you skip this step, Visual Studio may show the variables in project settings 
 ### What to do
 
 1. Find the setup `.bat` that comes with the example/deps package.
-2. Run it.
+2. Run it by double-clicking it in **File Explorer**, or by navigating to its folder in **CMD** and running it directly. Do **not** run it from Git Bash — `.bat` files set environment variables in a way that only persists correctly when run from CMD or by double-clicking.
 3. Close and reopen Visual Studio if it was already open.
 
 ### Important note
 
-If you later move your KenshiLib or Boost folders, run the `.bat` again so the environment variables point to the new locations.
+If you later move your KenshiLib or Boost folders, simply re-running the `.bat` may not be enough. You may need to **manually delete the existing environment variables** first (via System Properties -> Environment Variables), then run the `.bat` again so the new locations are picked up correctly.
 
 ![setup.bat](./.attachments/setup-bat.png)
 
@@ -179,12 +180,30 @@ The two important ones are:
 
 ### How to check them
 
+**Use Windows Command Prompt (CMD) — not Git Bash, not PowerShell.**
+
+Open CMD from the Start menu (search for `cmd`). You do not need to navigate to any specific folder — environment variables are global and accessible from anywhere.
+
 ```
 echo %KENSHILIB_DIR%
 echo %BOOST_INCLUDE_PATH%
 ```
 
 You should see real paths, not blank output.
+
+If you are in **PowerShell** instead, the equivalent commands are:
+
+```
+$env:KENSHILIB_DIR
+$env:BOOST_INCLUDE_PATH
+```
+
+If you are in **Git Bash**, the equivalent commands are:
+
+```
+echo $KENSHILIB_DIR
+echo $BOOST_INCLUDE_PATH
+```
 
 ### What they should point to
 
@@ -245,6 +264,44 @@ Do **not** start by creating your own plugin project. Get `HelloWorld` building 
 
 ## 10. Verify VC++ Settings (Include and libraries directories)
 
+### Understanding `$(VAR)` syntax
+
+The paths below use `$(VARIABLE_NAME)` syntax. These are **environment variable references** — Visual Studio resolves them automatically to the actual paths on your machine using the variables you set in step 5 and verified in step 6.
+
+For example, if your `KENSHILIB_DIR` is `C:\Git\KenshiLib_Examples_deps\KenshiLib`, then:
+
+```
+$(KENSHILIB_DIR)\Include
+```
+
+resolves to:
+
+```
+C:\Git\KenshiLib_Examples_deps\KenshiLib\Include
+```
+
+You can paste the `$(VAR)` form directly into the Visual Studio fields — you do **not** need to substitute your literal paths manually. If your environment variables from step 6 are correct, the `$(VAR)` syntax is the preferred approach and will work for any machine.
+
+If you prefer, you can also paste the literal path you got from step 6 directly but you'll need to append anything that comes after in the example, so if you enter for example:
+
+```
+C:\Git\KenshiLib_Examples_deps\
+```
+to replace
+```
+$(KENSHILIB_DIR)\Include
+```
+
+Then you'll lose the \Include
+so the fix is to add it
+
+```
+C:\Git\KenshiLib_Examples_deps\Include;...
+```
+And you won't be able to build
+
+---
+
 **Configuration Properties -> VC++ Directories -> General -> Include Directories**
 
 ```
@@ -292,7 +349,7 @@ If that folder is empty, check that `stage\lib` exists and is not empty before p
 
 ---
 
-## 13. (Optional Sanity Check) Verify the expanded include and library paths
+### (Optional Sanity Check) Verify the expanded include and library paths
 
 Use Visual Studio's expanded path view to confirm:
 
@@ -512,15 +569,7 @@ Only after this should you move on to hooking game functions, custom dialogue be
 
 ---
 
-## 24. Suggested screenshot slots summary
 
-
-13. successful `HelloWorld` build
-14. copied/renamed project files
-15. Target Name / output DLL settings
-16. RE_Kenshi log showing plugin loaded
-
----
 
 ## 25. Final note
 
