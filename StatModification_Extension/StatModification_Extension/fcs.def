@@ -1,0 +1,80 @@
+enum itemType { STAT_DEFINITION=3000, CLAMP_PROFILE=3001, ADJUST_SKILL_LEVEL=3002, SET_SKILL_LEVEL=3003 }
+
+// DC_STAT_UNMODIFIED: checks the character's raw base stat (ignores equipment bonuses).
+//   Use for trainer qualification checks -- does this NPC actually know the skill?
+// DC_STAT_MODIFIED: checks the effective stat including all bonuses.
+//   tag = StatsEnumerated integer (see your STAT_DEFINITION records for the values).
+//   val0 = the threshold to compare against.
+//   who  = T_ME to check the dialogue owner, T_TARGET to check the conversation target.
+enum DialogConditionEnum { DC_STAT_UNMODIFIED=3004, DC_STAT_MODIFIED=3005 }
+
+// -----------------------------------------------------------------------
+// STAT_DEFINITION
+// Vanilla Kenshi stats are already covered -- use the canonical records
+// shipped with this mod.
+//
+// Plugin authors adding new stats: ship your own STAT_DEFINITION records
+// in your .mod alongside your plugin. Set "enum value" to your stat's
+// StatsEnumerated integer and publish that value so others can build
+// compat without needing your source.
+//
+// Want compat for a plugin that didn't ship records? Create a
+// STAT_DEFINITION record in your own .mod and set "enum value" to the
+// integer that plugin uses for its stat. You don't need the source --
+// just the published integer value.
+//
+// Vanilla stat integers are fixed in the Kenshi binary and will not change.
+// -----------------------------------------------------------------------
+[STAT_DEFINITION]
+enum value: 0 "StatsEnumerated integer. See the block comment above for how to set this."
+
+// -----------------------------------------------------------------------
+// CLAMP_PROFILE
+// Reusable clamp policies. Reference from an ADJUST_SKILL_LEVEL or
+// SET_SKILL_LEVEL record to enable clamping. Leave the reference empty
+// on an action record to disable clamping entirely.
+// -----------------------------------------------------------------------
+[CLAMP_PROFILE]
+clamp min: 0         "Inclusive lower bound."
+clamp max: 100       "Inclusive upper bound."
+
+// -----------------------------------------------------------------------
+// ADJUST_SKILL_LEVEL
+// val0 = amount to add (add actions) or subtract (remove actions).
+// stat  = reference to a STAT_DEFINITION record.
+// clamp profile = optional reference to a CLAMP_PROFILE record.
+//                 Leave empty for no clamping.
+// -----------------------------------------------------------------------
+[ADJUST_SKILL_LEVEL]
+stat: STAT_DEFINITION (0)        "Which stat to modify. Pick a STAT_DEFINITION record. Val 0 shown here is unused."
+clamp profile: CLAMP_PROFILE (0) "Optional clamping policy. Leave empty for no clamping. Val 0 shown here is unused."
+comments: ""                     "Author-facing notes. Ignored by runtime."
+
+// -----------------------------------------------------------------------
+// SET_SKILL_LEVEL
+// val0 = value to assign exactly.
+// -----------------------------------------------------------------------
+[SET_SKILL_LEVEL]
+stat: STAT_DEFINITION (0)        "Which stat to set. Pick a STAT_DEFINITION record. Val 0 shown here is unused."
+clamp profile: CLAMP_PROFILE (0) "Optional clamping policy. Leave empty for no clamping. Val 0 shown here is unused."
+comments: ""                     "Author-facing notes. Ignored by runtime."
+
+[FCS_LAYOUT]
+Characters:               CHARACTER
+    Skill Adjustments:    ADJUST_SKILL_LEVEL
+        Stat Definitions: STAT_DEFINITION
+        Clamp Profiles:   CLAMP_PROFILE
+    Skill Sets:           SET_SKILL_LEVEL
+
+[DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
+add skill levels to speaker: ADJUST_SKILL_LEVEL (0) "Adds val0 levels to the current speaker. Use a positive number. 0 means 0."
+add skill levels to target:  ADJUST_SKILL_LEVEL (0) "Adds val0 levels to the conversation target. Use a positive number. 0 means 0."
+add skill levels to owner:   ADJUST_SKILL_LEVEL (0) "Adds val0 levels to the dialogue owner. Use a positive number. 0 means 0."
+
+remove skill levels from speaker: ADJUST_SKILL_LEVEL (0) "Removes val0 levels from the current speaker. Use a positive number. 0 means 0."
+remove skill levels from target:  ADJUST_SKILL_LEVEL (0) "Removes val0 levels from the conversation target. Use a positive number. 0 means 0."
+remove skill levels from owner:   ADJUST_SKILL_LEVEL (0) "Removes val0 levels from the dialogue owner. Use a positive number. 0 means 0."
+
+set skill level for speaker: SET_SKILL_LEVEL (0) "Sets the current speaker's skill to val0 exactly. 0 means 0."
+set skill level for target:  SET_SKILL_LEVEL (0) "Sets the conversation target's skill to val0 exactly. 0 means 0."
+set skill level for owner:   SET_SKILL_LEVEL (0) "Sets the dialogue owner's skill to val0 exactly. 0 means 0."
