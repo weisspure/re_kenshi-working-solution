@@ -1,21 +1,18 @@
-enum itemType { STAT_DEFINITION=3000, CLAMP_PROFILE=3001, ADJUST_SKILL_LEVEL=3002, SET_SKILL_LEVEL=3003 }
+﻿enum itemType { STAT_DEFINITION=3000, CLAMP_PROFILE=3001, ADJUST_SKILL_LEVEL=3002, SET_SKILL_LEVEL=3003 }
 
-// DC_STAT_UNMODIFIED: checks the character's raw base stat (ignores equipment bonuses).
-//   Use for trainer qualification checks -- does this NPC actually know the skill?
-// DC_STAT_MODIFIED: checks the effective stat including all bonuses.
-//   tag = StatsEnumerated integer (see your STAT_DEFINITION records for the values).
-//   val0 = the threshold to compare against.
-//   who  = T_ME to check the dialogue owner, T_TARGET to check the conversation target.
-//
-// DC_STAT_COMPARE_UNMODIFIED: compares two characters' raw base stats.
-// DC_STAT_COMPARE_MODIFIED: compares two characters' effective stats.
+// DC_STAT_LEVEL_COMPARE_UNMODIFIED: compares two characters' raw base stats.
+// DC_STAT_LEVEL_COMPARE_MODIFIED: compares two characters' effective stats.
 //   tag  = StatsEnumerated integer -- the same stat is read from both characters.
 //   val0 = unused.
 //   who  = controls the left-hand side of the comparison.
 //          T_ME means: owner OP target (e.g. is the owner stronger than the target?)
 //          other values mean: target OP owner
 //   compareBy = the operator (equals / less than / more than).
-enum DialogConditionEnum { DC_STAT_UNMODIFIED=3004, DC_STAT_MODIFIED=3005, DC_STAT_COMPARE_UNMODIFIED=3006, DC_STAT_COMPARE_MODIFIED=3007 }
+//
+// Single-character stat threshold checks are intentionally not duplicated here.
+// Use BFrizzle's Dialogue conditions for those in pass 1. A future pass may add
+// improved threshold checks with T_WHOLE_SQUAD support under new IDs.
+enum DialogConditionEnum { DC_STAT_LEVEL_COMPARE_UNMODIFIED=3004, DC_STAT_LEVEL_COMPARE_MODIFIED=3005 }
 
 // -----------------------------------------------------------------------
 // STAT_DEFINITION
@@ -93,3 +90,4 @@ remove skill levels from owner:   ADJUST_SKILL_LEVEL (0) "Removes val0 levels fr
 set skill level for speaker: SET_SKILL_LEVEL (0) "Sets the current speaker's skill to val0 exactly. 0 means 0."
 set skill level for target:  SET_SKILL_LEVEL (0) "Sets the conversation target's skill to val0 exactly. 0 means 0."
 set skill level for owner:   SET_SKILL_LEVEL (0) "Sets the dialogue owner's skill to val0 exactly. 0 means 0."
+

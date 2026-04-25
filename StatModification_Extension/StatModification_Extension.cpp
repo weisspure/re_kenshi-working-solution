@@ -6,10 +6,10 @@
 // adjust or set character skill stats at runtime.
 //
 // Supported item types:
-//   ADJUST_SKILL_LEVEL (3000) - adjusts a stat by a delta value
-//   SET_SKILL_LEVEL    (3001) - sets a stat to a specific value
-//   STAT_DEFINITION    (3002) - identifies which stat to target
-//   CLAMP_PROFILE      (3003) - reusable clamping policy
+//   STAT_DEFINITION    (3000) - identifies which stat to target
+//   CLAMP_PROFILE      (3001) - reusable clamping policy
+//   ADJUST_SKILL_LEVEL (3002) - adjusts a stat by a delta value
+//   SET_SKILL_LEVEL    (3003) - sets a stat to a specific value
 //
 // Supported action keys (all read from dialogLine->getGameData()->objectReferences):
 //
@@ -39,6 +39,9 @@
 #include <string>
 #include <sstream>
 
+// Set true only for short in-game identity spikes. This is intentionally noisy.
+static const bool LOG_DIALOGUE_IDENTITY_SPIKE = false;
+
 // ============================================================
 // SECTION 1: Custom item type IDs
 // ============================================================
@@ -49,28 +52,57 @@
  */
 enum ItemTypeExtended
 {
-	ADJUST_SKILL_LEVEL = 3000, ///< FCS item type for stat-adjust actions
-	SET_SKILL_LEVEL = 3001,	   ///< FCS item type for stat-set actions
-	STAT_DEFINITION = 3002,	   ///< FCS item type for stat definition records
-	CLAMP_PROFILE = 3003	   ///< FCS item type for reusable clamp policy records
+	STAT_DEFINITION = 3000,	   ///< FCS item type for stat definition records
+	CLAMP_PROFILE = 3001,	   ///< FCS item type for reusable clamp policy records
+	ADJUST_SKILL_LEVEL = 3002, ///< FCS item type for stat-adjust actions
+	SET_SKILL_LEVEL = 3003	   ///< FCS item type for stat-set actions
 };
 
 /**
- * @brief Condition IDs for two-character stat comparisons.
- *
- * Compares the same stat on owner vs target rather than one character vs a
- * fixed threshold. Single-value threshold checks are provided by BFrizzle's
- * Dialogue plugin (BFrizz Extra Extensions) and are not duplicated here.
- *
- * Pass 2: add T_WHOLE_SQUAD threshold checks at 3008/3009.
- * Use GetModuleHandle("BFrizz_Extra_Extensions.dll") in startPlugin to
- * warn when Dialogue is absent.
+ * @brief Custom dialogue condition IDs used by this plugin.
  */
 enum ExtendedDialogConditionEnum
 {
-	DC_STAT_COMPARE_UNMODIFIED = 3006, ///< Compares two characters' base stat values
-	DC_STAT_COMPARE_MODIFIED = 3007  ///< Compares two characters' effective stat values
+	DC_STAT_LEVEL_COMPARE_UNMODIFIED = 3004, ///< Compares two characters' base stat values
+	DC_STAT_LEVEL_COMPARE_MODIFIED = 3005  ///< Compares two characters' effective stat values
 };
+
+// FCS objectReferences keys for dialogue actions. These must match fcs.def exactly.
+static const char* ACTION_ADD_SKILL_LEVELS_TO_SPEAKER = "add skill levels to speaker";
+static const char* ACTION_ADD_SKILL_LEVELS_TO_TARGET = "add skill levels to target";
+static const char* ACTION_ADD_SKILL_LEVELS_TO_OWNER = "add skill levels to owner";
+static const char* ACTION_REMOVE_SKILL_LEVELS_FROM_SPEAKER = "remove skill levels from speaker";
+static const char* ACTION_REMOVE_SKILL_LEVELS_FROM_TARGET = "remove skill levels from target";
+static const char* ACTION_REMOVE_SKILL_LEVELS_FROM_OWNER = "remove skill levels from owner";
+static const char* ACTION_SET_SKILL_LEVEL_FOR_SPEAKER = "set skill level for speaker";
+static const char* ACTION_SET_SKILL_LEVEL_FOR_TARGET = "set skill level for target";
+static const char* ACTION_SET_SKILL_LEVEL_FOR_OWNER = "set skill level for owner";
+
+// FCS field and objectReferences keys. These must match fcs.def / FCS condition data.
+static const char* REF_STAT = "stat";
+static const char* REF_CLAMP_PROFILE = "clamp profile";
+static const char* REF_CONDITIONS = "conditions";
+static const char* FIELD_ENUM_VALUE = "enum value";
+static const char* FIELD_CLAMP_MIN = "clamp min";
+static const char* FIELD_CLAMP_MAX = "clamp max";
+static const char* FIELD_CONDITION_NAME = "condition name";
+static const char* FIELD_COMPARE_BY = "compare by";
+static const char* FIELD_WHO = "who";
+static const char* FIELD_TAG = "tag";
+
+static const char* STAT_ACTION_KEYS[] = {
+	ACTION_ADD_SKILL_LEVELS_TO_SPEAKER,
+	ACTION_ADD_SKILL_LEVELS_TO_TARGET,
+	ACTION_ADD_SKILL_LEVELS_TO_OWNER,
+	ACTION_REMOVE_SKILL_LEVELS_FROM_SPEAKER,
+	ACTION_REMOVE_SKILL_LEVELS_FROM_TARGET,
+	ACTION_REMOVE_SKILL_LEVELS_FROM_OWNER,
+	ACTION_SET_SKILL_LEVEL_FOR_SPEAKER,
+	ACTION_SET_SKILL_LEVEL_FOR_TARGET,
+	ACTION_SET_SKILL_LEVEL_FOR_OWNER
+};
+
+static const int STAT_ACTION_KEY_COUNT = 9;
 
 // ============================================================
 // SECTION 2: String utilities
@@ -90,6 +122,55 @@ static std::string FloatToString(float value)
 	std::ostringstream ss;
 	ss << value;
 	return ss.str();
+}
+
+/** @brief Converts a pointer value to a compact string for diagnostics. */
+static std::string PointerToString(const void* ptr)
+{
+	std::ostringstream ss;
+	ss << ptr;
+	return ss.str();
+}
+
+/** @brief Writes a namespaced info message to the RE_KENSHI debug log. */
+static void LogInfo(const std::string& message)
+{
+	DebugLog("StatModification: " + message);
+}
+
+/** @brief Writes a namespaced warning message to the RE_KENSHI debug log. */
+static void LogWarning(const std::string& message)
+{
+	DebugLog("StatModification WARNING: " + message);
+}
+
+/** @brief Writes a namespaced error message to the RE_KENSHI error log. */
+static void LogError(const std::string& message)
+{
+	ErrorLog("StatModification: " + message);
+}
+
+/** @brief Describes a GameData record without relying on string IDs for behavior. */
+static std::string DescribeGameData(GameData* data)
+{
+	if (data == 0)
+		return "null";
+
+	return "name=\"" + data->name +
+		"\" | stringID=\"" + data->stringID +
+		"\" | id=" + IntToString(data->id) +
+		" | type=" + IntToString((int)data->type);
+}
+
+/** @brief Describes a character pointer for temporary identity diagnostics. */
+static std::string DescribeCharacter(Character* character)
+{
+	if (character == 0)
+		return "null";
+
+	return "ptr=" + PointerToString(character) +
+		" | name=\"" + character->getName() +
+		"\" | data={" + DescribeGameData(character->getGameData()) + "}";
 }
 
 // ============================================================
@@ -127,6 +208,26 @@ static int GetIntField(
 	return fallback;
 }
 
+/**
+ * @brief Returns a non-empty GameData reference list by FCS key.
+ *
+ * Missing keys and empty lists both return null. Callers decide whether that
+ * is a no-op, an optional unset field, or an error.
+ */
+static Ogre::vector<GameDataReference>::type* FindReferences(
+	GameData* data,
+	const std::string& key)
+{
+	if (data == 0)
+		return 0;
+
+	auto it = data->objectReferences.find(key);
+	if (it == data->objectReferences.end() || it->second.empty())
+		return 0;
+
+	return &it->second;
+}
+
 // ============================================================
 // SECTION 4: Stat definition resolution
 // ============================================================
@@ -143,23 +244,27 @@ static int GetIntField(
  * @param actionRecord  The ADJUST_SKILL_LEVEL or SET_SKILL_LEVEL GameData.
  * @return The STAT_DEFINITION GameData, or null if unresolvable.
  */
-static GameData* GetStatDefinitionRecord(GameData* actionRecord)
+static GameData* GetStatDefinitionRecord(
+	GameData* actionRecord,
+	const std::string& context)
 {
 	if (actionRecord == 0)
 		return 0;
 
-	auto it = actionRecord->objectReferences.find("stat");
-	if (it == actionRecord->objectReferences.end() || it->second.empty())
+	Ogre::vector<GameDataReference>::type* refs = FindReferences(actionRecord, REF_STAT);
+	if (refs == 0)
 		return 0;
 
-	GameData* ptr = it->second[0].ptr;
+	GameData* ptr = (*refs)[0].ptr;
 	if (ptr == 0)
 		return 0;
 
 	if ((int)ptr->type != STAT_DEFINITION)
 	{
-		ErrorLog(
-			"StatModification: wrong item type for stat reference"
+		LogError(
+			"wrong item type for stat reference"
+			" | context=" +
+			context +
 			" | expected=" +
 			IntToString(STAT_DEFINITION) +
 			" | got=" + IntToString((int)ptr->type));
@@ -196,7 +301,7 @@ static StatsEnumerated ReadStatEnum(GameData* statDef)
 	if (statDef == 0)
 		return STAT_NONE;
 
-	return (StatsEnumerated)GetIntField(statDef, "enum value", (int)STAT_NONE);
+	return (StatsEnumerated)GetIntField(statDef, FIELD_ENUM_VALUE, (int)STAT_NONE);
 }
 
 // ============================================================
@@ -222,6 +327,24 @@ enum TargetRole
 	ROLE_TARGET,
 	ROLE_OWNER
 };
+
+/** @brief Converts a TargetRole to the FCS-facing role name. */
+static std::string TargetRoleToString(TargetRole role)
+{
+	switch (role)
+	{
+	case ROLE_SPEAKER:
+		return "speaker";
+
+	case ROLE_TARGET:
+		return "target";
+
+	case ROLE_OWNER:
+		return "owner";
+	}
+
+	return "unknown";
+}
 
 /**
  * @brief Resolves a Character* from a Dialogue using a TargetRole.
@@ -261,6 +384,57 @@ static Character* ResolveTarget(
 	return 0;
 }
 
+/** @brief Logs current dialogue identities for short in-game test spikes. */
+static void LogDialogueIdentitySpike(
+	const std::string& phase,
+	Dialogue* dlg,
+	DialogLineData* dialogLine)
+{
+	if (!LOG_DIALOGUE_IDENTITY_SPIKE)
+		return;
+
+	if (dlg == 0 || dialogLine == 0)
+	{
+		LogInfo("identity spike | phase=" + phase + " | dlg or dialogLine is null");
+		return;
+	}
+
+	GameData* lineData = dialogLine->getGameData();
+	Character* speaker = ResolveTarget(dlg, dialogLine, ROLE_SPEAKER);
+	Character* target = ResolveTarget(dlg, dialogLine, ROLE_TARGET);
+	Character* owner = ResolveTarget(dlg, dialogLine, ROLE_OWNER);
+
+	LogInfo(
+		"identity spike"
+		" | phase=" +
+		phase +
+		" | line={" + DescribeGameData(lineData) +
+		"} | dialogLine->speaker=" + IntToString((int)dialogLine->speaker) +
+		" | speaker={" + DescribeCharacter(speaker) +
+		"} | target={" + DescribeCharacter(target) +
+		"} | owner={" + DescribeCharacter(owner) + "}");
+}
+
+/** @brief Logs condition-side identities for short in-game test spikes. */
+static void LogConditionIdentitySpike(
+	const std::string& phase,
+	DialogLineData* dialogLine,
+	Character* me,
+	Character* target)
+{
+	if (!LOG_DIALOGUE_IDENTITY_SPIKE)
+		return;
+
+	GameData* lineData = (dialogLine == 0) ? 0 : dialogLine->getGameData();
+	LogInfo(
+		"identity spike"
+		" | phase=" +
+		phase +
+		" | line={" + DescribeGameData(lineData) +
+		"} | me={" + DescribeCharacter(me) +
+		"} | target={" + DescribeCharacter(target) + "}");
+}
+
 // ============================================================
 // SECTION 6: Clamp configuration
 // ============================================================
@@ -292,27 +466,68 @@ struct ClampConfig
  * @param actionRecord  The ADJUST_SKILL_LEVEL or SET_SKILL_LEVEL GameData. May be null.
  * @return A ClampConfig describing the clamping policy.
  */
-static ClampConfig ReadClampProfile(GameData* actionRecord)
+static ClampConfig ReadClampProfile(
+	GameData* actionRecord,
+	const std::string& context)
 {
 	ClampConfig result;
 	result.doClamp = false; // Default: no profile = no clamping
 	result.minValue = 0.0f;
-	result.maxValue = 100.0f;
+	result.maxValue = 0.0f; // Unused unless doClamp is true
 
 	if (actionRecord == 0)
 		return result;
 
-	auto it = actionRecord->objectReferences.find("clamp profile");
-	if (it == actionRecord->objectReferences.end() || it->second.empty())
+	Ogre::vector<GameDataReference>::type* refs = FindReferences(actionRecord, REF_CLAMP_PROFILE);
+	if (refs == 0)
 		return result; // No reference - unclamped
 
-	GameData* profile = it->second[0].ptr;
+	GameData* profile = (*refs)[0].ptr;
 	if (profile == 0)
+	{
+		LogError("clamp profile reference is null | context=" + context + " | continuing unclamped");
 		return result;
+	}
+
+	if ((int)profile->type != CLAMP_PROFILE)
+	{
+		LogError(
+			"wrong item type for clamp profile"
+			" | context=" +
+			context +
+			" | expected=" +
+			IntToString(CLAMP_PROFILE) +
+			" | got=" + IntToString((int)profile->type) +
+			" | continuing unclamped");
+		return result;
+	}
+
+	auto minIt = profile->idata.find(FIELD_CLAMP_MIN);
+	auto maxIt = profile->idata.find(FIELD_CLAMP_MAX);
+	if (minIt == profile->idata.end() || maxIt == profile->idata.end())
+	{
+		LogError("clamp profile is missing clamp min or clamp max | context=" + context + " | continuing unclamped");
+		return result;
+	}
+
+	float minValue = (float)minIt->second;
+	float maxValue = (float)maxIt->second;
+	if (minValue > maxValue)
+	{
+		LogError(
+			"clamp profile min is greater than max"
+			" | context=" +
+			context +
+			" | min=" +
+			FloatToString(minValue) +
+			" | max=" + FloatToString(maxValue) +
+			" | continuing unclamped");
+		return result;
+	}
 
 	result.doClamp = true;
-	result.minValue = (float)GetIntField(profile, "clamp min", 0);
-	result.maxValue = (float)GetIntField(profile, "clamp max", 100);
+	result.minValue = minValue;
+	result.maxValue = maxValue;
 	return result;
 }
 
@@ -364,7 +579,7 @@ static void AdjustStatForCharacter(
 	CharStats* stats = character->getStats();
 	if (stats == 0)
 	{
-		ErrorLog("StatModification: character->getStats() returned null during adjust");
+		LogError("character->getStats() returned null during adjust");
 		return;
 	}
 
@@ -373,8 +588,8 @@ static void AdjustStatForCharacter(
 	float after = ApplyClamp(before + (float)delta, clamp);
 	statRef = after;
 
-	DebugLog(
-		"StatModification: adjusted " + CharStats::getStatName(stat) +
+	LogInfo(
+		"adjusted " + CharStats::getStatName(stat) +
 		" | delta=" + IntToString(delta) +
 		" | before=" + FloatToString(before) +
 		" | after=" + FloatToString(after));
@@ -403,7 +618,7 @@ static void SetStatForCharacter(
 	CharStats* stats = character->getStats();
 	if (stats == 0)
 	{
-		ErrorLog("StatModification: character->getStats() returned null during set");
+		LogError("character->getStats() returned null during set");
 		return;
 	}
 
@@ -412,8 +627,8 @@ static void SetStatForCharacter(
 	float after = ApplyClamp((float)value, clamp);
 	statRef = after;
 
-	DebugLog(
-		"StatModification: set " + CharStats::getStatName(stat) +
+	LogInfo(
+		"set " + CharStats::getStatName(stat) +
 		" | to=" + IntToString(value) +
 		" | before=" + FloatToString(before) +
 		" | after=" + FloatToString(after));
@@ -426,7 +641,7 @@ static void SetStatForCharacter(
 /**
  * @brief Applies one adjust GameDataReference to a character.
  *
- * Validates that ref.ptr is non-null and has type ADJUST_SKILL_LEVEL (3000).
+ * Validates that ref.ptr is non-null and has type ADJUST_SKILL_LEVEL (3002).
  * Navigates to the referenced STAT_DEFINITION record to read the stat enum value.
  * Reads the delta from ref.values[0], applies the remove sign if needed,
  * reads the optional CLAMP_PROFILE reference, and calls AdjustStatForCharacter.
@@ -438,39 +653,58 @@ static void SetStatForCharacter(
 static void ApplyAdjustRef(
 	Character* character,
 	const GameDataReference& ref,
+	const std::string& actionKey,
 	bool isRemove)
 {
 	if (ref.ptr == 0)
 	{
-		ErrorLog("StatModification: ref.ptr is null in adjust action, skipping entry");
+		LogError("ref.ptr is null in adjust action | action=" + actionKey + " | skipping entry");
 		return;
 	}
 
 	if ((int)ref.ptr->type != ADJUST_SKILL_LEVEL)
 	{
-		ErrorLog(
-			"StatModification: wrong item type in adjust action"
+		LogError(
+			"wrong item type in adjust action"
+			" | action=" +
+			actionKey +
 			" | expected=" +
 			IntToString(ADJUST_SKILL_LEVEL) +
 			" | got=" + IntToString((int)ref.ptr->type));
 		return;
 	}
 
-	GameData* statDef = GetStatDefinitionRecord(ref.ptr);
+	GameData* statDef = GetStatDefinitionRecord(ref.ptr, actionKey);
 	if (statDef == 0)
 	{
-		ErrorLog("StatModification: no STAT_DEFINITION reference set in adjust action");
+		LogError("no STAT_DEFINITION reference set in adjust action | action=" + actionKey);
 		return;
 	}
 
 	StatsEnumerated stat = ReadStatEnum(statDef);
 	if (stat == STAT_NONE)
 	{
-		ErrorLog("StatModification: STAT_DEFINITION enum value is STAT_NONE in adjust action");
+		LogError("STAT_DEFINITION enum value is STAT_NONE in adjust action | action=" + actionKey);
 		return;
 	}
 
 	int delta = ref.values[0];
+	if (!isRemove && delta < 0)
+	{
+		LogWarning(
+			"add action has negative value"
+			" | action=" +
+			actionKey +
+			" | delta=" + IntToString(delta));
+	}
+	if (isRemove && delta < 0)
+	{
+		LogWarning(
+			"remove action already has negative value"
+			" | action=" +
+			actionKey +
+			" | delta=" + IntToString(delta));
+	}
 
 	// Remove actions always subtract: ensure delta is non-positive.
 	// If the author stored a positive value, negate it.
@@ -478,14 +712,14 @@ static void ApplyAdjustRef(
 	if (isRemove && delta > 0)
 		delta = -delta;
 
-	ClampConfig clamp = ReadClampProfile(ref.ptr);
+	ClampConfig clamp = ReadClampProfile(ref.ptr, actionKey);
 	AdjustStatForCharacter(character, stat, delta, clamp);
 }
 
 /**
  * @brief Applies one set GameDataReference to a character.
  *
- * Validates that ref.ptr is non-null and has type SET_SKILL_LEVEL (3001).
+ * Validates that ref.ptr is non-null and has type SET_SKILL_LEVEL (3003).
  * Navigates to the referenced STAT_DEFINITION record to read the stat enum value.
  * Reads the target value from ref.values[0], reads the optional CLAMP_PROFILE
  * reference, and calls SetStatForCharacter.
@@ -495,40 +729,43 @@ static void ApplyAdjustRef(
  */
 static void ApplySetRef(
 	Character* character,
-	const GameDataReference& ref)
+	const GameDataReference& ref,
+	const std::string& actionKey)
 {
 	if (ref.ptr == 0)
 	{
-		ErrorLog("StatModification: ref.ptr is null in set action, skipping entry");
+		LogError("ref.ptr is null in set action | action=" + actionKey + " | skipping entry");
 		return;
 	}
 
 	if ((int)ref.ptr->type != SET_SKILL_LEVEL)
 	{
-		ErrorLog(
-			"StatModification: wrong item type in set action"
+		LogError(
+			"wrong item type in set action"
+			" | action=" +
+			actionKey +
 			" | expected=" +
 			IntToString(SET_SKILL_LEVEL) +
 			" | got=" + IntToString((int)ref.ptr->type));
 		return;
 	}
 
-	GameData* statDef = GetStatDefinitionRecord(ref.ptr);
+	GameData* statDef = GetStatDefinitionRecord(ref.ptr, actionKey);
 	if (statDef == 0)
 	{
-		ErrorLog("StatModification: no STAT_DEFINITION reference set in set action");
+		LogError("no STAT_DEFINITION reference set in set action | action=" + actionKey);
 		return;
 	}
 
 	StatsEnumerated stat = ReadStatEnum(statDef);
 	if (stat == STAT_NONE)
 	{
-		ErrorLog("StatModification: STAT_DEFINITION enum value is STAT_NONE in set action");
+		LogError("STAT_DEFINITION enum value is STAT_NONE in set action | action=" + actionKey);
 		return;
 	}
 
 	int value = ref.values[0];
-	ClampConfig clamp = ReadClampProfile(ref.ptr);
+	ClampConfig clamp = ReadClampProfile(ref.ptr, actionKey);
 	SetStatForCharacter(character, stat, value, clamp);
 }
 
@@ -557,22 +794,24 @@ static void TryApplyAdjustAction(
 	TargetRole role,
 	bool isRemove)
 {
-	auto iter = lineData->objectReferences.find(actionKey);
-
-	if (iter == lineData->objectReferences.end())
+	Ogre::vector<GameDataReference>::type* refs = FindReferences(lineData, actionKey);
+	if (refs == 0)
 		return;
 
 	Character* character = ResolveTarget(dlg, dialogLine, role);
 	if (character == 0)
 	{
-		ErrorLog("StatModification: could not resolve character for '" + actionKey);
+		LogError(
+			"could not resolve character"
+			" | action=" +
+			actionKey +
+			" | role=" + TargetRoleToString(role));
 		return;
 	}
 
-	Ogre::vector<GameDataReference>::type& refs = iter->second;
-	for (auto it = refs.begin(); it != refs.end(); ++it)
+	for (auto it = refs->begin(); it != refs->end(); ++it)
 	{
-		ApplyAdjustRef(character, *it, isRemove);
+		ApplyAdjustRef(character, *it, actionKey, isRemove);
 	}
 }
 
@@ -594,23 +833,42 @@ static void TryApplySetAction(
 	const std::string& actionKey,
 	TargetRole role)
 {
-	auto iter = lineData->objectReferences.find(actionKey);
-
-	if (iter == lineData->objectReferences.end())
+	Ogre::vector<GameDataReference>::type* refs = FindReferences(lineData, actionKey);
+	if (refs == 0)
 		return;
 
 	Character* character = ResolveTarget(dlg, dialogLine, role);
 	if (character == 0)
 	{
-		ErrorLog("StatModification: could not resolve character for '" + actionKey + "'");
+		LogError(
+			"could not resolve character"
+			" | action=" +
+			actionKey +
+			" | role=" + TargetRoleToString(role));
 		return;
 	}
 
-	Ogre::vector<GameDataReference>::type& refs = iter->second;
-	for (auto it = refs.begin(); it != refs.end(); ++it)
+	for (auto it = refs->begin(); it != refs->end(); ++it)
 	{
-		ApplySetRef(character, *it);
+		ApplySetRef(character, *it, actionKey);
 	}
+}
+
+/**
+ * @brief Returns true if the dialogue line contains any StatModification action key.
+ */
+static bool HasAnyStatAction(GameData* lineData)
+{
+	if (lineData == 0)
+		return false;
+
+	for (int i = 0; i < STAT_ACTION_KEY_COUNT; ++i)
+	{
+		if (FindReferences(lineData, STAT_ACTION_KEYS[i]) != 0)
+			return true;
+	}
+
+	return false;
 }
 
 /**
@@ -639,19 +897,26 @@ static void DispatchStatActions(Dialogue* dlg, DialogLineData* dialogLine)
 	if (lineData == 0)
 		return;
 
+	if (!HasAnyStatAction(lineData))
+		return;
+
+	LogDialogueIdentitySpike("before stat action dispatch", dlg, dialogLine);
+
 	// Adjust actions run first (delta = values[0]).
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to speaker", ROLE_SPEAKER, false);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to target", ROLE_TARGET, false);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to owner", ROLE_OWNER, false);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from speaker", ROLE_SPEAKER, true);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from target", ROLE_TARGET, true);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from owner", ROLE_OWNER, true);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, ACTION_ADD_SKILL_LEVELS_TO_SPEAKER, ROLE_SPEAKER, false);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, ACTION_ADD_SKILL_LEVELS_TO_TARGET, ROLE_TARGET, false);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, ACTION_ADD_SKILL_LEVELS_TO_OWNER, ROLE_OWNER, false);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, ACTION_REMOVE_SKILL_LEVELS_FROM_SPEAKER, ROLE_SPEAKER, true);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, ACTION_REMOVE_SKILL_LEVELS_FROM_TARGET, ROLE_TARGET, true);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, ACTION_REMOVE_SKILL_LEVELS_FROM_OWNER, ROLE_OWNER, true);
 
 	// Set actions run second (value = values[0]).
 	// If a stat was already adjusted above, the set value wins.
-	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for speaker", ROLE_SPEAKER);
-	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for target", ROLE_TARGET);
-	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for owner", ROLE_OWNER);
+	TryApplySetAction(dlg, dialogLine, lineData, ACTION_SET_SKILL_LEVEL_FOR_SPEAKER, ROLE_SPEAKER);
+	TryApplySetAction(dlg, dialogLine, lineData, ACTION_SET_SKILL_LEVEL_FOR_TARGET, ROLE_TARGET);
+	TryApplySetAction(dlg, dialogLine, lineData, ACTION_SET_SKILL_LEVEL_FOR_OWNER, ROLE_OWNER);
+
+	LogDialogueIdentitySpike("after stat action dispatch", dlg, dialogLine);
 }
 
 // ============================================================
@@ -659,7 +924,7 @@ static void DispatchStatActions(Dialogue* dlg, DialogLineData* dialogLine)
 // ============================================================
 
 /**
- * @brief Compares two integers using a ComparisonEnum operator.
+ * @brief Compares two displayed stat levels using a ComparisonEnum operator.
  *
  * @param value      The character's stat value (left-hand side).
  * @param threshold  The value to compare against (right-hand side).
@@ -681,12 +946,12 @@ static bool StatDialogCompare(int value, int threshold, ComparisonEnum compareBy
  * @brief Compares the same stat on two characters.
  *
  * left OP right, where the operator is compareBy.
- * Used by DC_STAT_COMPARE_UNMODIFIED and DC_STAT_COMPARE_MODIFIED.
+ * Used by DC_STAT_LEVEL_COMPARE_UNMODIFIED and DC_STAT_LEVEL_COMPARE_MODIFIED.
  * The caller determines which character is left and which is right
  * via the who field on the condition (T_ME = owner is left, otherwise
  * target is left).
  *
- * @param conditionType  DC_STAT_COMPARE_UNMODIFIED or DC_STAT_COMPARE_MODIFIED.
+ * @param conditionType  DC_STAT_LEVEL_COMPARE_UNMODIFIED or DC_STAT_LEVEL_COMPARE_MODIFIED.
  * @param left           The left-hand character. May be null (returns false).
  * @param right          The right-hand character. May be null (returns false).
  * @param compareBy      The comparison operator.
@@ -701,17 +966,87 @@ static bool EvaluateStatComparison(
 	StatsEnumerated stat)
 {
 	if (left == 0 || right == 0)
+	{
+		LogError("comparison condition character is null");
 		return false;
+	}
+
+	if (stat == STAT_NONE)
+	{
+		LogError("comparison condition stat is STAT_NONE");
+		return false;
+	}
 
 	CharStats* leftStats = left->getStats();
 	CharStats* rightStats = right->getStats();
 	if (leftStats == 0 || rightStats == 0)
+	{
+		LogError("character->getStats() returned null during comparison condition check");
 		return false;
+	}
 
-	bool unmodified = (conditionType == DC_STAT_COMPARE_UNMODIFIED);
+	bool unmodified = (conditionType == DC_STAT_LEVEL_COMPARE_UNMODIFIED);
 	float leftValue = leftStats->getStat(stat, unmodified);
 	float rightValue = rightStats->getStat(stat, unmodified);
+
+	// Match the player's visible stat-level granularity: 90.5 and 90.1 both
+	// compare as level 90.
 	return StatDialogCompare((int)leftValue, (int)rightValue, compareBy);
+}
+
+/**
+ * @brief Returns true when a condition ID belongs to this plugin.
+ */
+static bool IsStatCondition(int conditionType)
+{
+	return conditionType == DC_STAT_LEVEL_COMPARE_UNMODIFIED ||
+		conditionType == DC_STAT_LEVEL_COMPARE_MODIFIED;
+}
+
+/**
+ * @brief Parsed fields from one StatModification condition record.
+ */
+struct StatConditionFields
+{
+	ExtendedDialogConditionEnum conditionType;
+	ComparisonEnum compareBy;
+	TalkerEnum who;
+	StatsEnumerated stat;
+};
+
+/**
+ * @brief Reads the fields required by a StatModification condition record.
+ */
+static bool ReadStatConditionFields(
+	GameData* conditionRecord,
+	ExtendedDialogConditionEnum conditionType,
+	StatConditionFields& out)
+{
+	if (conditionRecord == 0)
+	{
+		LogError("stat condition record is null");
+		return false;
+	}
+
+	auto compareByIt = conditionRecord->idata.find(FIELD_COMPARE_BY);
+	auto whoIt = conditionRecord->idata.find(FIELD_WHO);
+	auto tagIt = conditionRecord->idata.find(FIELD_TAG);
+	if (compareByIt == conditionRecord->idata.end() ||
+		whoIt == conditionRecord->idata.end() ||
+		tagIt == conditionRecord->idata.end())
+	{
+		LogError(
+			"stat condition is missing compare by, who, or tag"
+			" | condition={" +
+			DescribeGameData(conditionRecord) + "}");
+		return false;
+	}
+
+	out.conditionType = conditionType;
+	out.compareBy = (ComparisonEnum)compareByIt->second;
+	out.who = (TalkerEnum)whoIt->second;
+	out.stat = (StatsEnumerated)tagIt->second;
+	return true;
 }
 
 /** @brief Saved pointer to the original DialogLineData::checkTags. */
@@ -720,15 +1055,15 @@ static bool (*checkTags_orig)(DialogLineData* thisptr, Character* me, Character*
 /**
  * @brief Hook for DialogLineData::checkTags.
  *
- * Evaluates DC_STAT_UNMODIFIED and DC_STAT_MODIFIED conditions.
+ * Evaluates StatModification_Extension dialogue conditions.
  * Only enters the condition scan if at least one condition key on this
  * dialogue line matches a supported extended type, then processes all
  * custom conditions from objectReferences["conditions"].
  * Conditions from other plugins are ignored (returns true for them).
  * The original is always called last so built-in conditions still evaluate.
  *
- * Note: T_WHOLE_SQUAD is not supported. T_ME checks the dialogue owner;
- * all other TalkerEnum values check the conversation target.
+ * Note: T_WHOLE_SQUAD is not supported. T_ME means owner OP target;
+ * all other TalkerEnum values mean target OP owner.
  *
  * @param thisptr  The dialogue line being evaluated.
  * @param me       The dialogue owner (typically the NPC).
@@ -736,11 +1071,19 @@ static bool (*checkTags_orig)(DialogLineData* thisptr, Character* me, Character*
  */
 static bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* target)
 {
+	if (thisptr == 0)
+	{
+		LogError("checkTags_hook received null DialogLineData");
+		return false;
+	}
+
+	LogConditionIdentitySpike("checkTags entry", thisptr, me, target);
+
 	bool hasExtendedCondition = false;
 	for (int i = 0; i < (int)thisptr->conditions.size(); ++i)
 	{
 		int key = thisptr->conditions[i]->key;
-		if (key == DC_STAT_COMPARE_UNMODIFIED || key == DC_STAT_COMPARE_MODIFIED)
+		if (IsStatCondition(key))
 		{
 			hasExtendedCondition = true;
 			break;
@@ -749,60 +1092,89 @@ static bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* ta
 
 	if (hasExtendedCondition)
 	{
+		LogConditionIdentitySpike("before stat condition evaluation", thisptr, me, target);
+
 		GameData* lineData = thisptr->getGameData();
-		if (lineData != 0)
+		if (lineData == 0)
 		{
-			auto iter = lineData->objectReferences.find("conditions");
-			if (iter != lineData->objectReferences.end())
+			LogError("stat condition found but dialogue line GameData is null");
+			return false;
+		}
+
+		Ogre::vector<GameDataReference>::type* conditionRefs = FindReferences(lineData, REF_CONDITIONS);
+		if (conditionRefs == 0)
+		{
+			LogError("stat condition found but condition references are missing or empty");
+			return false;
+		}
+
+		bool evaluatedStatCondition = false;
+		for (int i = 0; i < (int)conditionRefs->size(); ++i)
+		{
+			GameData* cond = (*conditionRefs)[i].ptr;
+			if (cond == 0)
 			{
-				for (int i = 0; i < (int)iter->second.size(); ++i)
-				{
-					GameData* cond = iter->second[i].ptr;
-					if (cond == 0)
-						continue;
-
-					auto condNameIt = cond->idata.find("condition name");
-					auto compareByIt = cond->idata.find("compare by");
-					auto whoIt = cond->idata.find("who");
-					auto tagIt = cond->idata.find("tag");
-
-					if (condNameIt == cond->idata.end() ||
-						compareByIt == cond->idata.end() ||
-						whoIt == cond->idata.end() ||
-						tagIt == cond->idata.end())
-					{
-						continue; // Missing fields -- not our condition, skip
-					}
-
-					int conditionInt = condNameIt->second;
-
-					if (conditionInt != DC_STAT_COMPARE_UNMODIFIED &&
-						conditionInt != DC_STAT_COMPARE_MODIFIED)
-						continue;
-
-					ExtendedDialogConditionEnum conditionType =
-						(ExtendedDialogConditionEnum)conditionInt;
-					ComparisonEnum compareBy = (ComparisonEnum)compareByIt->second;
-					TalkerEnum who = (TalkerEnum)whoIt->second;
-					StatsEnumerated stat = (StatsEnumerated)tagIt->second;
-
-					Character* left = (who == T_ME) ? me : target;
-					Character* right = (who == T_ME) ? target : me;
-
-					if (!EvaluateStatComparison(conditionType, left, right, compareBy, stat))
-						return false;
-				}
+				LogError("null condition reference while evaluating stat condition");
+				continue;
 			}
+
+			auto condNameIt = cond->idata.find(FIELD_CONDITION_NAME);
+			if (condNameIt == cond->idata.end())
+			{
+				LogError("condition record is missing condition name while evaluating stat condition | condition={" + DescribeGameData(cond) + "}");
+				continue;
+			}
+
+			int conditionInt = condNameIt->second;
+			if (!IsStatCondition(conditionInt))
+				continue;
+
+			evaluatedStatCondition = true;
+
+			StatConditionFields fields;
+			ExtendedDialogConditionEnum conditionType =
+				(ExtendedDialogConditionEnum)conditionInt;
+			if (!ReadStatConditionFields(cond, conditionType, fields))
+				return false;
+
+			if (fields.who == T_WHOLE_SQUAD)
+			{
+				LogError("T_WHOLE_SQUAD is not supported for stat conditions | condition={" + DescribeGameData(cond) + "}");
+				return false;
+			}
+
+			Character* left = (fields.who == T_ME) ? me : target;
+			Character* right = (fields.who == T_ME) ? target : me;
+
+			if (!EvaluateStatComparison(fields.conditionType, left, right, fields.compareBy, fields.stat))
+				return false;
+		}
+
+		if (!evaluatedStatCondition)
+		{
+			LogError("stat condition key found but no matching condition record was evaluated | line={" + DescribeGameData(lineData) + "}");
+			return false;
 		}
 	}
 
 	if (checkTags_orig == 0)
 	{
-		ErrorLog("StatModification: checkTags_orig is null, cannot call original");
+		LogError("checkTags_orig is null, cannot call original");
 		return true;
 	}
 
-	return checkTags_orig(thisptr, me, target);
+	bool result = checkTags_orig(thisptr, me, target);
+	if (LOG_DIALOGUE_IDENTITY_SPIKE)
+	{
+		LogInfo(
+			"identity spike"
+			" | phase=checkTags original returned"
+			" | result=" +
+			IntToString(result ? 1 : 0) +
+			" | line={" + DescribeGameData(thisptr == 0 ? 0 : thisptr->getGameData()) + "}");
+	}
+
+	return result;
 }
 
 // ============================================================
@@ -832,7 +1204,7 @@ static void _doActions_hook(Dialogue* thisptr, DialogLineData* dialogLine)
 
 	if (_doActions_orig == 0)
 	{
-		ErrorLog("StatModification: _doActions_orig is null, cannot call original");
+		LogError("_doActions_orig is null, cannot call original");
 		return;
 	}
 
@@ -852,7 +1224,7 @@ __declspec(dllexport) void startPlugin()
 		&_doActions_hook,
 		&_doActions_orig))
 	{
-		ErrorLog("StatModification_Extension: failed to hook Dialogue::_doActions");
+		LogError("failed to hook Dialogue::_doActions");
 		return;
 	}
 
@@ -861,9 +1233,10 @@ __declspec(dllexport) void startPlugin()
 		&checkTags_hook,
 		&checkTags_orig))
 	{
-		ErrorLog("StatModification_Extension: failed to hook DialogLineData::checkTags");
+		LogError("failed to hook DialogLineData::checkTags");
 		return;
 	}
 
-	DebugLog("StatModification_Extension: loaded and hooks installed");
+	LogInfo("loaded and hooks installed");
 }
+

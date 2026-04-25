@@ -27,6 +27,7 @@ Always null-check `ref.ptr` before use. `ptr` can be null on malformed records.
 ## Dialogue identities - fixed, never swap
 - `Dialogue::me` = NPC/dialogue owner, always
 - `dlg->getConversationTarget().getCharacter()` = player, when using "Talk To Me" on NPC, is actually based on the target of first dialogue event that initiated convo. This hasn't really been tested outside of EV_TALK_TO_ME events/dialogues.
+- Current testing is mostly `EV_TALK_TO_ME`, player button-press initiated. For NPC-initiated or non-talk-to-me conversations, instrument temporary in-game hooks before relying on owner/target/speaker assumptions; behavior may be identical, but silent inversion bugs are plausible.
 - `_doActions` fires for every line; `checkTags` fires for condition evaluation, if stumble across something more effecient than `_doActions` to hook onto for dialoguge effect checks flag this to user, even if not relevant to ask.
 
 ## lektor<> buffers

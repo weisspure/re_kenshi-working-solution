@@ -1,7 +1,7 @@
-# StatModification_Extension (WIP)
+﻿# StatModification_Extension (WIP)
 
 **NOTE: This documentation is a work in progress. Expect missing information and broken links and out of date information.**
-A RE_Kenshi runtime plugin that adds dialogue actions and conditions for modifying character skill stats directly from the FCS editor.
+A RE_Kenshi runtime plugin that adds dialogue actions and comparison conditions for modifying character skill stats directly from the FCS editor.
 
 ## What it does
 
@@ -10,7 +10,7 @@ Allows FCS dialogue authors to write dialogue lines that:
 - **Add** a flat number of levels to a character's skill
 - **Remove** a flat number of levels from a character's skill
 - **Set** a character's skill to an exact value
-- **Check** a character's skill level as a dialogue condition
+- **Compare** skill levels between dialogue participants
 
 All of this is authored entirely in the FCS editor with no scripting required.
 
@@ -27,7 +27,7 @@ All of this is authored entirely in the FCS editor with no scripting required.
 
 The plugin hooks `Dialogue::_doActions` and `DialogLineData::checkTags` in the Kenshi runtime. Custom record types are defined in `fcs.def` and appear in the FCS editor under `Characters > Skill Adjustments` and `Characters > Skill Sets`. The plugin reads those records at runtime and applies the stat changes.
 
-No FCS C# plugin is required for the actions. Conditions work without a C# plugin but display a raw number input for the stat tag field rather than a named dropdown.
+No FCS C# plugin is required for the actions. Comparison conditions work without a C# plugin but display a raw number input for the stat tag field rather than a named dropdown.
 
 ## Four record types
 
@@ -38,9 +38,12 @@ No FCS C# plugin is required for the actions. Conditions work without a C# plugi
 | `ADJUST_SKILL_LEVEL` | 3002 | Configuration for add/remove actions |
 | `SET_SKILL_LEVEL` | 3003 | Configuration for set actions |
 
-And two dialogue conditions:
+And two comparison dialogue conditions:
 
 | Condition | ID | Purpose |
 |---|---|---|
-| `DC_STAT_UNMODIFIED` | 3004 | Checks a stat's raw base value |
-| `DC_STAT_MODIFIED` | 3005 | Checks a stat's effective value including bonuses |
+| `DC_STAT_LEVEL_COMPARE_UNMODIFIED` | 3004 | Compares two characters' raw base stat values |
+| `DC_STAT_LEVEL_COMPARE_MODIFIED` | 3005 | Compares two characters' effective stat values including bonuses |
+
+Single-character stat threshold checks are intentionally not duplicated in pass 1. Use BFrizzle's Dialogue conditions for those checks. A future pass may add improved threshold checks under new IDs if they support behavior Dialogue does not, such as squad-aware checks.
+

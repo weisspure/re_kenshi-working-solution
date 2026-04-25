@@ -1,6 +1,6 @@
-# Conditions
+ï»¿# Conditions
 
-StatModification_Extension adds two custom dialogue conditions for checking character stat levels.
+StatModification_Extension adds two custom dialogue conditions for comparing character stat levels.
 
 ---
 
@@ -8,27 +8,23 @@ StatModification_Extension adds two custom dialogue conditions for checking char
 
 | Condition | ID | What it checks |
 |---|---|---|
-| `DC_STAT_UNMODIFIED` | 3004 | One character's raw base stat against a fixed threshold |
-| `DC_STAT_MODIFIED` | 3005 | One character's effective stat (including bonuses) against a fixed threshold |
-| `DC_STAT_COMPARE_UNMODIFIED` | 3006 | Two characters' raw base stats against each other |
-| `DC_STAT_COMPARE_MODIFIED` | 3007 | Two characters' effective stats against each other |
+| `DC_STAT_LEVEL_COMPARE_UNMODIFIED` | 3004 | Two characters' raw base stats against each other |
+| `DC_STAT_LEVEL_COMPARE_MODIFIED` | 3005 | Two characters' effective stats against each other |
 
-**Use `DC_STAT_UNMODIFIED`** when you want to check what a character actually knows — their trained skill level independent of gear. This is the right choice for trainer qualification checks ("does this NPC know Strength well enough to teach it?").
-
-**Use `DC_STAT_MODIFIED`** when you want to check what a character is effectively capable of in the moment, including equipment bonuses.
+Single-character stat threshold checks are intentionally not duplicated here. Use BFrizzle's Dialogue conditions for checks like "NPC Strength > 70". StatModification_Extension only adds the comparison conditions that Dialogue does not provide.
 
 ---
 
-## Setting up a condition in the FCS
+## Setting up a comparison condition in the FCS
 
-In the FCS dialogue condition editor, a stat condition row has four fields:
+In the FCS dialogue condition editor, a comparison condition row has four fields:
 
 | Field | What to set |
 |---|---|
-| Who | `T_ME` to check the dialogue owner. Any other value checks the conversation target. |
-| Condition | `DC_STAT_UNMODIFIED` or `DC_STAT_MODIFIED` |
-| Tag | The `StatsEnumerated` integer for the stat you want to check (see table below) |
-| Value | The threshold to compare against |
+| Who | Controls the left-hand side. `T_ME` = owner OP target. Any other supported value = target OP owner. |
+| Condition | `DC_STAT_LEVEL_COMPARE_UNMODIFIED` or `DC_STAT_LEVEL_COMPARE_MODIFIED` |
+| Tag | The `StatsEnumerated` integer for the stat (same stat is read from both characters) |
+| Value | Unused - leave at 0 |
 
 The comparison operator (equals / less than / greater than) is set separately on the condition row.
 
@@ -79,19 +75,21 @@ For custom stats added by another plugin, use the integer that plugin publishes 
 
 ---
 
-## Example: trainer qualification check
+## Example: trainer must outskill the student
 
-A trainer NPC who only offers training if their own Strength is at least 70 (base, not gear-boosted):
+An NPC trainer who only offers to teach Strength if their own base Strength exceeds the player's:
 
 ```
 Who:       T_ME
-Condition: DC_STAT_UNMODIFIED
-Tag:       1
-Compare:   greater than
-Value:     70
+Condition: DC_STAT_LEVEL_COMPARE_UNMODIFIED
+Tag:       1   (Strength)
+Compare:   more than
+Value:     0   (unused)
 ```
 
-This condition is placed on the dialogue line that offers training. If the NPC's base Strength is 70 or below, the line does not appear.
+Reads as: owner's base Strength > target's base Strength.
+
+To reverse the check (player must be weaker than the trainer), use `T_ME` with `more than`. To check that the player is already stronger, set `who` to any non-`T_ME` value with `more than` - this flips the sides so it reads target > owner.
 
 ---
 
@@ -101,33 +99,5 @@ The `tag` field currently shows as a plain number input in the FCS rather than a
 
 `T_WHOLE_SQUAD` is not supported as a `who` value for these conditions.
 
----
+Future pass: add improved single-character threshold conditions under the next available IDs if they support behavior Dialogue does not, such as squad-aware checks.
 
-## Comparison conditions
-
-`DC_STAT_COMPARE_UNMODIFIED` and `DC_STAT_COMPARE_MODIFIED` compare the same stat on two characters rather than comparing one character against a fixed number. This covers cases like "is this trainer more skilled than the student?" without needing to know either character's actual stat value at authoring time.
-
-### Field setup
-
-| Field | What to set |
-|---|---|
-| Who | Controls the left-hand side. `T_ME` = owner OP target. Any other value = target OP owner. |
-| Condition | `DC_STAT_COMPARE_UNMODIFIED` or `DC_STAT_COMPARE_MODIFIED` |
-| Tag | The `StatsEnumerated` integer for the stat (same stat is read from both characters) |
-| Value | Unused — leave at 0 |
-
-### Example: trainer must outskill the student
-
-An NPC trainer who only offers to teach Strength if their own base Strength exceeds the player's:
-
-```
-Who:       T_ME
-Condition: DC_STAT_COMPARE_UNMODIFIED
-Tag:       1   (Strength)
-Compare:   more than
-Value:     0   (unused)
-```
-
-Reads as: owner's base Strength > target's base Strength.
-
-To reverse the check (player must be weaker than the trainer), use `T_ME` with `more than`. To check that the player is already stronger, set `who` to any non-`T_ME` value with `more than` — this flips the sides so it reads target > owner.

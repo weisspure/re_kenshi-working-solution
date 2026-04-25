@@ -1,4 +1,4 @@
-﻿---
+---
 applyTo: "**/*.def,**/*.json"
 ---
 # FCS Schema Rules

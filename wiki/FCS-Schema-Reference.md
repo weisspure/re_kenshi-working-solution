@@ -1,4 +1,4 @@
-# FCS Schema Reference
+ï»¿# FCS Schema Reference
 
 Complete reference for all record types and dialogue actions defined by StatModification_Extension.
 
@@ -65,7 +65,7 @@ Found in the FCS tree under: `Characters > Skill Sets`
 
 All actions are available on `DIALOGUE`, `DIALOGUE_LINE`, and `WORD_SWAPS` items.
 
-The number typed on the action row is `val0`. It is always read literally — `0` means `0`, there is no sentinel behavior.
+The number typed on the action row is `val0`. It is always read literally - `0` means `0`, there is no sentinel behavior.
 
 ### Add skill levels
 
@@ -113,8 +113,9 @@ The referenced record must be a `SET_SKILL_LEVEL` record.
 
 | Target name | Resolved as |
 |---|---|
-| speaker | `dlg->getSpeaker(dialogLine->speaker, dialogLine, false)` — handles T_ME, T_TARGET, T_INTERJECTOR, etc. |
-| target | `dlg->getConversationTarget().getCharacter()` — the player in a typical NPC conversation |
-| owner | `dlg->me` — the NPC who owns the Dialogue object, regardless of who is speaking the current line |
+| speaker | `dlg->getSpeaker(dialogLine->speaker, dialogLine, false)` - handles T_ME, T_TARGET, T_INTERJECTOR, etc. |
+| target | `dlg->getConversationTarget().getCharacter()` - the player in a typical NPC conversation |
+| owner | `dlg->me` - the NPC who owns the Dialogue object, regardless of who is speaking the current line |
 
 Actions fire for every dialogue line including NPC lines. The identity of speaker, target, and owner does not change based on which side of the conversation the line is on.
+
