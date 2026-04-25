@@ -6,27 +6,41 @@ enum itemType { STAT_DEFINITION=3000, CLAMP_PROFILE=3001, ADJUST_SKILL_LEVEL=300
 //   tag = StatsEnumerated integer (see your STAT_DEFINITION records for the values).
 //   val0 = the threshold to compare against.
 //   who  = T_ME to check the dialogue owner, T_TARGET to check the conversation target.
-enum DialogConditionEnum { DC_STAT_UNMODIFIED=3004, DC_STAT_MODIFIED=3005 }
+//
+// DC_STAT_COMPARE_UNMODIFIED: compares two characters' raw base stats.
+// DC_STAT_COMPARE_MODIFIED: compares two characters' effective stats.
+//   tag  = StatsEnumerated integer -- the same stat is read from both characters.
+//   val0 = unused.
+//   who  = controls the left-hand side of the comparison.
+//          T_ME means: owner OP target (e.g. is the owner stronger than the target?)
+//          other values mean: target OP owner
+//   compareBy = the operator (equals / less than / more than).
+enum DialogConditionEnum { DC_STAT_UNMODIFIED=3004, DC_STAT_MODIFIED=3005, DC_STAT_COMPARE_UNMODIFIED=3006, DC_STAT_COMPARE_MODIFIED=3007 }
 
 // -----------------------------------------------------------------------
 // STAT_DEFINITION
-// Vanilla Kenshi stats are already covered -- use the canonical records
-// shipped with this mod.
 //
-// Plugin authors adding new stats: ship your own STAT_DEFINITION records
-// in your .mod alongside your plugin. Set "enum value" to your stat's
-// StatsEnumerated integer and publish that value so others can build
-// compat without needing your source.
+// Defines a selectable stat for Skill Adjustments and Skill Sets.
 //
-// Want compat for a plugin that didn't ship records? Create a
-// STAT_DEFINITION record in your own .mod and set "enum value" to the
-// integer that plugin uses for its stat. You don't need the source --
-// just the published integer value.
+// Normal FCS users should use the provided Stat Definition records shipped
+// with this mod, such as Strength, Athletics, Toughness, etc.
 //
-// Vanilla stat integers are fixed in the Kenshi binary and will not change.
+// Plugin authors adding new stats:
+// Ship your own STAT_DEFINITION records in your .mod alongside your plugin.
+// Set "enum value" to your stat's StatsEnumerated integer and publish that
+// value so others can build compatibility records without needing your source.
+//
+// Want compatibility for a plugin that did not ship records?
+// Create a STAT_DEFINITION record in your own .mod and set "enum value" to
+// the integer that plugin uses for its stat. You do not need the source;
+// you only need the published integer value.
+//
+// Vanilla stat integers are fixed in the Kenshi binary and should not change.
+// Incorrect enum values may modify the wrong stat or be rejected by runtime.
 // -----------------------------------------------------------------------
 [STAT_DEFINITION]
-enum value: 0 "StatsEnumerated integer. See the block comment above for how to set this."
+enum value: 0 "Internal stat ID used by runtime. Use the provided Stat Definitions unless adding support for another StatsEnumerated value."
+comments: "" "Author-facing notes for FCS users. Ignored by runtime."
 
 // -----------------------------------------------------------------------
 // CLAMP_PROFILE
@@ -37,6 +51,7 @@ enum value: 0 "StatsEnumerated integer. See the block comment above for how to s
 [CLAMP_PROFILE]
 clamp min: 0         "Inclusive lower bound."
 clamp max: 100       "Inclusive upper bound."
+comments: "" multiline "Author-facing notes. Ignored by runtime."
 
 // -----------------------------------------------------------------------
 // ADJUST_SKILL_LEVEL
@@ -48,7 +63,7 @@ clamp max: 100       "Inclusive upper bound."
 [ADJUST_SKILL_LEVEL]
 stat: STAT_DEFINITION (0)        "Which stat to modify. Pick a STAT_DEFINITION record. Val 0 shown here is unused."
 clamp profile: CLAMP_PROFILE (0) "Optional clamping policy. Leave empty for no clamping. Val 0 shown here is unused."
-comments: ""                     "Author-facing notes. Ignored by runtime."
+comments: "" multiline                     "Author-facing notes. Ignored by runtime."
 
 // -----------------------------------------------------------------------
 // SET_SKILL_LEVEL
@@ -57,7 +72,7 @@ comments: ""                     "Author-facing notes. Ignored by runtime."
 [SET_SKILL_LEVEL]
 stat: STAT_DEFINITION (0)        "Which stat to set. Pick a STAT_DEFINITION record. Val 0 shown here is unused."
 clamp profile: CLAMP_PROFILE (0) "Optional clamping policy. Leave empty for no clamping. Val 0 shown here is unused."
-comments: ""                     "Author-facing notes. Ignored by runtime."
+comments: "" multiline                     "Author-facing notes. Ignored by runtime."
 
 [FCS_LAYOUT]
 Characters:               CHARACTER

@@ -39,7 +39,6 @@
 #include <string>
 #include <sstream>
 
-
 // ============================================================
 // SECTION 1: Custom item type IDs
 // ============================================================
@@ -50,29 +49,28 @@
  */
 enum ItemTypeExtended
 {
-	ADJUST_SKILL_LEVEL = 3000,  ///< FCS item type for stat-adjust actions
-	SET_SKILL_LEVEL    = 3001,  ///< FCS item type for stat-set actions
-	STAT_DEFINITION    = 3002,  ///< FCS item type for stat definition records
-	CLAMP_PROFILE      = 3003   ///< FCS item type for reusable clamp policy records
+	ADJUST_SKILL_LEVEL = 3000, ///< FCS item type for stat-adjust actions
+	SET_SKILL_LEVEL = 3001,	   ///< FCS item type for stat-set actions
+	STAT_DEFINITION = 3002,	   ///< FCS item type for stat definition records
+	CLAMP_PROFILE = 3003	   ///< FCS item type for reusable clamp policy records
 };
 
 /**
- * @brief Extended dialogue condition type IDs for stat checks.
+ * @brief Condition IDs for two-character stat comparisons.
  *
- * DC_STAT_UNMODIFIED checks the character's raw base stat value,
- * ignoring any equipment or modifier bonuses. Use this for trainer
- * checks ("does this NPC actually know this skill?").
+ * Compares the same stat on owner vs target rather than one character vs a
+ * fixed threshold. Single-value threshold checks are provided by BFrizzle's
+ * Dialogue plugin (BFrizz Extra Extensions) and are not duplicated here.
  *
- * DC_STAT_MODIFIED checks the effective stat value including all bonuses.
- *
- * These must match the values in your fcs.def DialogConditionEnum extension.
+ * Pass 2: add T_WHOLE_SQUAD threshold checks at 3008/3009.
+ * Use GetModuleHandle("BFrizz_Extra_Extensions.dll") in startPlugin to
+ * warn when Dialogue is absent.
  */
 enum ExtendedDialogConditionEnum
 {
-	DC_STAT_UNMODIFIED = 3004,  ///< Checks base stat value (ignores equipment bonuses)
-	DC_STAT_MODIFIED   = 3005   ///< Checks effective stat value (includes equipment bonuses)
+	DC_STAT_COMPARE_UNMODIFIED = 3006, ///< Compares two characters' base stat values
+	DC_STAT_COMPARE_MODIFIED = 3007  ///< Compares two characters' effective stat values
 };
-
 
 // ============================================================
 // SECTION 2: String utilities
@@ -94,7 +92,6 @@ static std::string FloatToString(float value)
 	return ss.str();
 }
 
-
 // ============================================================
 // SECTION 3: Safe GameData field readers
 //
@@ -110,9 +107,9 @@ static std::string FloatToString(float value)
  * @param fallback  Returned when data is null or key is missing.
  */
 static int GetIntField(
-	GameData*          data,
+	GameData* data,
 	const std::string& key,
-	int                fallback)
+	int fallback)
 {
 	if (data == 0)
 		return fallback;
@@ -163,9 +160,9 @@ static GameData* GetStatDefinitionRecord(GameData* actionRecord)
 	{
 		ErrorLog(
 			"StatModification: wrong item type for stat reference"
-			" | expected=" + IntToString(STAT_DEFINITION) +
-			" | got=" + IntToString((int)ptr->type)
-		);
+			" | expected=" +
+			IntToString(STAT_DEFINITION) +
+			" | got=" + IntToString((int)ptr->type));
 		return 0;
 	}
 
@@ -176,7 +173,7 @@ static GameData* GetStatDefinitionRecord(GameData* actionRecord)
  * @brief Reads the StatsEnumerated value from a STAT_DEFINITION record.
  *
  * The int stored in idata["enum value"] is cast directly to StatsEnumerated.
- * No whitelist is applied — the value is used as-is.
+ * No whitelist is applied - the value is used as-is.
  *
  * Extension contract:
  *   This plugin makes no assumptions about which integers are valid beyond
@@ -202,7 +199,6 @@ static StatsEnumerated ReadStatEnum(GameData* statDef)
 	return (StatsEnumerated)GetIntField(statDef, "enum value", (int)STAT_NONE);
 }
 
-
 // ============================================================
 // SECTION 5: Target role and resolution
 // ============================================================
@@ -218,7 +214,7 @@ static StatsEnumerated ReadStatEnum(GameData* statDef)
  * ROLE_OWNER   - the dialogue/package owner, resolved via Dialogue::me.
  *                This is the character who holds the dialogue package,
  *                regardless of who is speaking the current line. In a
- *                typical player conversation this is the NPC side.
+ *                typical "Talk to me" conversation this is the NPC side.
  */
 enum TargetRole
 {
@@ -240,31 +236,30 @@ enum TargetRole
  * @return The resolved Character*, or null if unavailable.
  */
 static Character* ResolveTarget(
-	Dialogue*       dlg,
+	Dialogue* dlg,
 	DialogLineData* dialogLine,
-	TargetRole      role)
+	TargetRole role)
 {
 	if (dlg == 0)
 		return 0;
 
 	switch (role)
 	{
-		case ROLE_SPEAKER:
-			if (dialogLine == 0)
-				return 0;
-			return dlg->getSpeaker(dialogLine->speaker, dialogLine, false);
+	case ROLE_SPEAKER:
+		if (dialogLine == 0)
+			return 0;
+		return dlg->getSpeaker(dialogLine->speaker, dialogLine, false);
 
-		case ROLE_TARGET:
-			return dlg->getConversationTarget().getCharacter();
+	case ROLE_TARGET:
+		return dlg->getConversationTarget().getCharacter();
 
-		case ROLE_OWNER:
-			// dlg->me is the dialogue/package owner (typically the NPC side of TALK_TO_ME).
-			return dlg->me;
+	case ROLE_OWNER:
+		// dlg->me is the dialogue/package owner (typically the NPC side of TALK_TO_ME).
+		return dlg->me;
 	}
 
 	return 0;
 }
-
 
 // ============================================================
 // SECTION 6: Clamp configuration
@@ -278,7 +273,7 @@ static Character* ResolveTarget(
  */
 struct ClampConfig
 {
-	bool  doClamp;
+	bool doClamp;
 	float minValue;
 	float maxValue;
 };
@@ -287,7 +282,7 @@ struct ClampConfig
  * @brief Reads the ClampConfig from an optional CLAMP_PROFILE reference.
  *
  * Looks up objectReferences["clamp profile"] on the action record.
- * If no reference is set, clamping is disabled entirely — the stat value
+ * If no reference is set, clamping is disabled entirely - the stat value
  * is written as-is. If a CLAMP_PROFILE record is referenced, its fields
  * drive the policy.
  *
@@ -300,7 +295,7 @@ struct ClampConfig
 static ClampConfig ReadClampProfile(GameData* actionRecord)
 {
 	ClampConfig result;
-	result.doClamp  = false;  // Default: no profile = no clamping
+	result.doClamp = false; // Default: no profile = no clamping
 	result.minValue = 0.0f;
 	result.maxValue = 100.0f;
 
@@ -309,13 +304,13 @@ static ClampConfig ReadClampProfile(GameData* actionRecord)
 
 	auto it = actionRecord->objectReferences.find("clamp profile");
 	if (it == actionRecord->objectReferences.end() || it->second.empty())
-		return result;  // No reference — unclamped
+		return result; // No reference - unclamped
 
 	GameData* profile = it->second[0].ptr;
 	if (profile == 0)
 		return result;
 
-	result.doClamp  = true;
+	result.doClamp = true;
 	result.minValue = (float)GetIntField(profile, "clamp min", 0);
 	result.maxValue = (float)GetIntField(profile, "clamp max", 100);
 	return result;
@@ -342,7 +337,6 @@ static float ApplyClamp(float value, const ClampConfig& clamp)
 	return value;
 }
 
-
 // ============================================================
 // SECTION 7: Stat mutation helpers
 // ============================================================
@@ -359,9 +353,9 @@ static float ApplyClamp(float value, const ClampConfig& clamp)
  * @param clamp      The clamping policy to apply after adjustment.
  */
 static void AdjustStatForCharacter(
-	Character*         character,
-	StatsEnumerated    stat,
-	int                delta,
+	Character* character,
+	StatsEnumerated stat,
+	int delta,
 	const ClampConfig& clamp)
 {
 	if (character == 0)
@@ -375,16 +369,15 @@ static void AdjustStatForCharacter(
 	}
 
 	float& statRef = stats->getStatRef(stat);
-	float  before  = statRef;
-	float  after   = ApplyClamp(before + (float)delta, clamp);
+	float before = statRef;
+	float after = ApplyClamp(before + (float)delta, clamp);
 	statRef = after;
 
 	DebugLog(
 		"StatModification: adjusted " + CharStats::getStatName(stat) +
 		" | delta=" + IntToString(delta) +
 		" | before=" + FloatToString(before) +
-		" | after=" + FloatToString(after)
-	);
+		" | after=" + FloatToString(after));
 }
 
 /**
@@ -399,9 +392,9 @@ static void AdjustStatForCharacter(
  * @param clamp      The clamping policy to apply after assignment.
  */
 static void SetStatForCharacter(
-	Character*         character,
-	StatsEnumerated    stat,
-	int                value,
+	Character* character,
+	StatsEnumerated stat,
+	int value,
 	const ClampConfig& clamp)
 {
 	if (character == 0)
@@ -415,18 +408,16 @@ static void SetStatForCharacter(
 	}
 
 	float& statRef = stats->getStatRef(stat);
-	float  before  = statRef;
-	float  after   = ApplyClamp((float)value, clamp);
+	float before = statRef;
+	float after = ApplyClamp((float)value, clamp);
 	statRef = after;
 
 	DebugLog(
 		"StatModification: set " + CharStats::getStatName(stat) +
 		" | to=" + IntToString(value) +
 		" | before=" + FloatToString(before) +
-		" | after=" + FloatToString(after)
-	);
+		" | after=" + FloatToString(after));
 }
-
 
 // ============================================================
 // SECTION 8: Per-reference action application
@@ -445,9 +436,9 @@ static void SetStatForCharacter(
  * @param isRemove   If true, the adjustment is forced to be non-positive so the stat is reduced.
  */
 static void ApplyAdjustRef(
-	Character*               character,
+	Character* character,
 	const GameDataReference& ref,
-	bool                     isRemove)
+	bool isRemove)
 {
 	if (ref.ptr == 0)
 	{
@@ -459,9 +450,9 @@ static void ApplyAdjustRef(
 	{
 		ErrorLog(
 			"StatModification: wrong item type in adjust action"
-			" | expected=" + IntToString(ADJUST_SKILL_LEVEL) +
-			" | got=" + IntToString((int)ref.ptr->type)
-		);
+			" | expected=" +
+			IntToString(ADJUST_SKILL_LEVEL) +
+			" | got=" + IntToString((int)ref.ptr->type));
 		return;
 	}
 
@@ -503,7 +494,7 @@ static void ApplyAdjustRef(
  * @param ref        The GameDataReference for this item entry.
  */
 static void ApplySetRef(
-	Character*               character,
+	Character* character,
 	const GameDataReference& ref)
 {
 	if (ref.ptr == 0)
@@ -516,9 +507,9 @@ static void ApplySetRef(
 	{
 		ErrorLog(
 			"StatModification: wrong item type in set action"
-			" | expected=" + IntToString(SET_SKILL_LEVEL) +
-			" | got=" + IntToString((int)ref.ptr->type)
-		);
+			" | expected=" +
+			IntToString(SET_SKILL_LEVEL) +
+			" | got=" + IntToString((int)ref.ptr->type));
 		return;
 	}
 
@@ -541,7 +532,6 @@ static void ApplySetRef(
 	SetStatForCharacter(character, stat, value, clamp);
 }
 
-
 // ============================================================
 // SECTION 9: Action dispatchers
 // ============================================================
@@ -560,12 +550,12 @@ static void ApplySetRef(
  * @param isRemove   If true, the adjustment is forced to be non-positive so the stat is reduced.
  */
 static void TryApplyAdjustAction(
-	Dialogue*          dlg,
-	DialogLineData*    dialogLine,
-	GameData*          lineData,
+	Dialogue* dlg,
+	DialogLineData* dialogLine,
+	GameData* lineData,
 	const std::string& actionKey,
-	TargetRole         role,
-	bool               isRemove)
+	TargetRole role,
+	bool isRemove)
 {
 	auto iter = lineData->objectReferences.find(actionKey);
 
@@ -575,7 +565,7 @@ static void TryApplyAdjustAction(
 	Character* character = ResolveTarget(dlg, dialogLine, role);
 	if (character == 0)
 	{
-		ErrorLog("StatModification: could not resolve character for '" + actionKey + "'");
+		ErrorLog("StatModification: could not resolve character for '" + actionKey);
 		return;
 	}
 
@@ -598,11 +588,11 @@ static void TryApplyAdjustAction(
  * @param role       Which character receives the set.
  */
 static void TryApplySetAction(
-	Dialogue*          dlg,
-	DialogLineData*    dialogLine,
-	GameData*          lineData,
+	Dialogue* dlg,
+	DialogLineData* dialogLine,
+	GameData* lineData,
 	const std::string& actionKey,
-	TargetRole         role)
+	TargetRole role)
 {
 	auto iter = lineData->objectReferences.find(actionKey);
 
@@ -650,20 +640,19 @@ static void DispatchStatActions(Dialogue* dlg, DialogLineData* dialogLine)
 		return;
 
 	// Adjust actions run first (delta = values[0]).
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to speaker",      ROLE_SPEAKER, false);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to target",       ROLE_TARGET,  false);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to owner",        ROLE_OWNER,   false);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to speaker", ROLE_SPEAKER, false);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to target", ROLE_TARGET, false);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, "add skill levels to owner", ROLE_OWNER, false);
 	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from speaker", ROLE_SPEAKER, true);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from target",  ROLE_TARGET,  true);
-	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from owner",   ROLE_OWNER,   true);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from target", ROLE_TARGET, true);
+	TryApplyAdjustAction(dlg, dialogLine, lineData, "remove skill levels from owner", ROLE_OWNER, true);
 
 	// Set actions run second (value = values[0]).
 	// If a stat was already adjusted above, the set value wins.
 	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for speaker", ROLE_SPEAKER);
-	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for target",  ROLE_TARGET);
-	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for owner",   ROLE_OWNER);
+	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for target", ROLE_TARGET);
+	TryApplySetAction(dlg, dialogLine, lineData, "set skill level for owner", ROLE_OWNER);
 }
-
 
 // ============================================================
 // SECTION 10: Stat condition evaluation
@@ -679,39 +668,50 @@ static void DispatchStatActions(Dialogue* dlg, DialogLineData* dialogLine)
  */
 static bool StatDialogCompare(int value, int threshold, ComparisonEnum compareBy)
 {
-	if (compareBy == CE_EQUALS   && value == threshold) return true;
-	if (compareBy == CE_LESS_THAN && value <  threshold) return true;
-	if (compareBy == CE_MORE_THAN && value >  threshold) return true;
+	if (compareBy == CE_EQUALS && value == threshold)
+		return true;
+	if (compareBy == CE_LESS_THAN && value < threshold)
+		return true;
+	if (compareBy == CE_MORE_THAN && value > threshold)
+		return true;
 	return false;
 }
 
 /**
- * @brief Evaluates a single stat condition against a character.
+ * @brief Compares the same stat on two characters.
  *
- * @param conditionType  DC_STAT_UNMODIFIED or DC_STAT_MODIFIED.
- * @param character      The character to check. May be null (returns false).
+ * left OP right, where the operator is compareBy.
+ * Used by DC_STAT_COMPARE_UNMODIFIED and DC_STAT_COMPARE_MODIFIED.
+ * The caller determines which character is left and which is right
+ * via the who field on the condition (T_ME = owner is left, otherwise
+ * target is left).
+ *
+ * @param conditionType  DC_STAT_COMPARE_UNMODIFIED or DC_STAT_COMPARE_MODIFIED.
+ * @param left           The left-hand character. May be null (returns false).
+ * @param right          The right-hand character. May be null (returns false).
  * @param compareBy      The comparison operator.
- * @param stat           The stat to read.
- * @param threshold      The value to compare against.
- * @return True if the condition holds.
+ * @param stat           The stat to read from both characters.
+ * @return True if left OP right holds.
  */
-static bool EvaluateStatCondition(
+static bool EvaluateStatComparison(
 	ExtendedDialogConditionEnum conditionType,
-	Character*                  character,
-	ComparisonEnum              compareBy,
-	StatsEnumerated             stat,
-	int                         threshold)
+	Character* left,
+	Character* right,
+	ComparisonEnum compareBy,
+	StatsEnumerated stat)
 {
-	if (character == 0)
+	if (left == 0 || right == 0)
 		return false;
 
-	CharStats* stats = character->getStats();
-	if (stats == 0)
+	CharStats* leftStats = left->getStats();
+	CharStats* rightStats = right->getStats();
+	if (leftStats == 0 || rightStats == 0)
 		return false;
 
-	bool unmodified = (conditionType == DC_STAT_UNMODIFIED);
-	float statValue = stats->getStat(stat, unmodified);
-	return StatDialogCompare((int)statValue, threshold, compareBy);
+	bool unmodified = (conditionType == DC_STAT_COMPARE_UNMODIFIED);
+	float leftValue = leftStats->getStat(stat, unmodified);
+	float rightValue = rightStats->getStat(stat, unmodified);
+	return StatDialogCompare((int)leftValue, (int)rightValue, compareBy);
 }
 
 /** @brief Saved pointer to the original DialogLineData::checkTags. */
@@ -740,7 +740,7 @@ static bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* ta
 	for (int i = 0; i < (int)thisptr->conditions.size(); ++i)
 	{
 		int key = thisptr->conditions[i]->key;
-		if (key == DC_STAT_UNMODIFIED || key == DC_STAT_MODIFIED)
+		if (key == DC_STAT_COMPARE_UNMODIFIED || key == DC_STAT_COMPARE_MODIFIED)
 		{
 			hasExtendedCondition = true;
 			break;
@@ -761,33 +761,35 @@ static bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* ta
 					if (cond == 0)
 						continue;
 
-					auto condNameIt  = cond->idata.find("condition name");
+					auto condNameIt = cond->idata.find("condition name");
 					auto compareByIt = cond->idata.find("compare by");
-					auto whoIt       = cond->idata.find("who");
-					auto tagIt       = cond->idata.find("tag");
+					auto whoIt = cond->idata.find("who");
+					auto tagIt = cond->idata.find("tag");
 
-					if (condNameIt  == cond->idata.end() ||
+					if (condNameIt == cond->idata.end() ||
 						compareByIt == cond->idata.end() ||
-						whoIt       == cond->idata.end() ||
-						tagIt       == cond->idata.end())
+						whoIt == cond->idata.end() ||
+						tagIt == cond->idata.end())
 					{
-						continue;  // Missing fields — not our condition, skip
+						continue; // Missing fields -- not our condition, skip
 					}
 
 					int conditionInt = condNameIt->second;
-					if (conditionInt != DC_STAT_UNMODIFIED && conditionInt != DC_STAT_MODIFIED)
-						continue;  // Different plugin's condition, skip
+
+					if (conditionInt != DC_STAT_COMPARE_UNMODIFIED &&
+						conditionInt != DC_STAT_COMPARE_MODIFIED)
+						continue;
 
 					ExtendedDialogConditionEnum conditionType =
 						(ExtendedDialogConditionEnum)conditionInt;
-					ComparisonEnum  compareBy = (ComparisonEnum)compareByIt->second;
-					TalkerEnum      who       = (TalkerEnum)whoIt->second;
-					StatsEnumerated stat      = (StatsEnumerated)tagIt->second;
-					int             threshold = iter->second[i].values[0];
+					ComparisonEnum compareBy = (ComparisonEnum)compareByIt->second;
+					TalkerEnum who = (TalkerEnum)whoIt->second;
+					StatsEnumerated stat = (StatsEnumerated)tagIt->second;
 
-					Character* conditionCheck = (who == T_ME) ? me : target;
+					Character* left = (who == T_ME) ? me : target;
+					Character* right = (who == T_ME) ? target : me;
 
-					if (!EvaluateStatCondition(conditionType, conditionCheck, compareBy, stat, threshold))
+					if (!EvaluateStatComparison(conditionType, left, right, compareBy, stat))
 						return false;
 				}
 			}
@@ -802,7 +804,6 @@ static bool checkTags_hook(DialogLineData* thisptr, Character* me, Character* ta
 
 	return checkTags_orig(thisptr, me, target);
 }
-
 
 // ============================================================
 // SECTION 11: Hook and plugin entry
@@ -847,18 +848,18 @@ static void _doActions_hook(Dialogue* thisptr, DialogLineData* dialogLine)
 __declspec(dllexport) void startPlugin()
 {
 	if (KenshiLib::SUCCESS != KenshiLib::AddHook(
-			KenshiLib::GetRealAddress(&Dialogue::_doActions),
-			&_doActions_hook,
-			&_doActions_orig))
+		KenshiLib::GetRealAddress(&Dialogue::_doActions),
+		&_doActions_hook,
+		&_doActions_orig))
 	{
 		ErrorLog("StatModification_Extension: failed to hook Dialogue::_doActions");
 		return;
 	}
 
 	if (KenshiLib::SUCCESS != KenshiLib::AddHook(
-			KenshiLib::GetRealAddress(&DialogLineData::checkTags),
-			&checkTags_hook,
-			&checkTags_orig))
+		KenshiLib::GetRealAddress(&DialogLineData::checkTags),
+		&checkTags_hook,
+		&checkTags_orig))
 	{
 		ErrorLog("StatModification_Extension: failed to hook DialogLineData::checkTags");
 		return;

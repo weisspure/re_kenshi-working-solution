@@ -1,0 +1,76 @@
+# For Plugin Authors
+
+This page covers how to add compatibility between StatModification_Extension and a RE_Kenshi plugin that introduces custom `StatsEnumerated` values.
+
+---
+
+## How stat identity works
+
+StatModification_Extension does not use a hardcoded whitelist of stats. When a dialogue author picks an `ADJUST_SKILL_LEVEL` or `SET_SKILL_LEVEL` record, that record has a reference to a `STAT_DEFINITION` record. The `STAT_DEFINITION` record stores a single integer in its `enum value` field. At runtime the plugin reads that integer and casts it directly to `StatsEnumerated`.
+
+This means any valid `StatsEnumerated` integer — including ones added by third-party plugins — will work without any changes to StatModification_Extension.
+
+---
+
+## What you need to do as a plugin author
+
+### 1. Publish your integer values
+
+When your RE_Kenshi plugin extends `StatsEnumerated` with custom values, publish those integers in your mod's documentation. Authors cannot create compatible `STAT_DEFINITION` records without knowing the exact integer.
+
+Example documentation format:
+
+```
+Custom StatsEnumerated values added by MyStatMod:
+  MY_STAT_WILLPOWER = 1100
+  MY_STAT_ENDURANCE = 1101
+```
+
+### 2. Ship canonical STAT_DEFINITION records
+
+In your plugin's `.mod` file, create a `STAT_DEFINITION` record for each custom stat you want to expose to dialogue authors:
+
+1. Navigate to `Characters > Skill Adjustments > Stat Definitions` in the FCS
+2. Create a new `STAT_DEFINITION` record
+3. Name it something descriptive (e.g. `Willpower`)
+4. Set `enum value` to the integer your plugin uses for that stat
+
+Shipping these records yourself means authors using your plugin alongside this one get immediate access to your stats in the dialogue action picker without any extra steps.
+
+### 3. If you do not ship records
+
+If you do not ship `STAT_DEFINITION` records, authors can still add compatibility themselves. They follow the same steps above using the integer values you have published. This is why publishing the integers matters.
+
+---
+
+## Important: integer stability
+
+The integer values you assign to your custom `StatsEnumerated` entries must be stable across versions of your plugin. If you change them, existing `STAT_DEFINITION` records created by you or by authors will silently target the wrong stat at runtime.
+
+Treat your published integers as a public API.
+
+---
+
+## The type ID you need to know
+
+`STAT_DEFINITION` records have type ID `3000`. If your plugin needs to detect or interact with `STAT_DEFINITION` records at runtime, this is the `itemType` integer to check against.
+
+---
+
+## What StatModification_Extension does with the integer
+
+For reference, the runtime code that reads your stat integer is:
+
+```cpp
+// Reads the StatsEnumerated integer from a STAT_DEFINITION record
+// and casts it directly. No whitelist is applied beyond rejecting STAT_NONE (0).
+static StatsEnumerated ReadStatEnum(GameData* statDef)
+{
+    if (statDef == 0)
+        return STAT_NONE;
+
+    return (StatsEnumerated)GetIntField(statDef, "enum value", (int)STAT_NONE);
+}
+```
+
+If the cast produces `STAT_NONE` (0) the action is skipped and an error is logged. All other integers are passed directly to `CharStats::getStatRef` or `CharStats::getStat`.

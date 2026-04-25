@@ -34,6 +34,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		CLAUDE_RE_Kenshi_Plugin_Notes.md = CLAUDE_RE_Kenshi_Plugin_Notes.md
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StatModification_Extension", "StatModification_Extension\StatModification_Extension.vcxproj", "{0F2D9DE1-0F59-4CDB-8829-46F17175D135}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -118,6 +120,14 @@ Global
 		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|x64.ActiveCfg = Release|Any CPU
 		{6A2F6D33-F73D-7427-7835-774F9AB5B99B}.Release|x64.Build.0 = Release|Any CPU
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Debug|Any CPU.Build.0 = Debug|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Debug|x64.ActiveCfg = Debug|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Debug|x64.Build.0 = Debug|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Release|Any CPU.ActiveCfg = Release|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Release|Any CPU.Build.0 = Release|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Release|x64.ActiveCfg = Release|x64
+		{0F2D9DE1-0F59-4CDB-8829-46F17175D135}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
