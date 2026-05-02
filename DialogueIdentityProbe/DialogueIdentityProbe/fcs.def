@@ -1,0 +1,10 @@
+enum itemType { DIALOGUE_IDENTITY_PROBE=3900 }
+
+[DIALOGUE_IDENTITY_PROBE]
+comments: "" multiline "Ignored. Used only as a marker."
+
+[FCS_LAYOUT]
+Characters: DIALOGUE_IDENTITY_PROBE
+
+[DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
+SM_PROBE_DIALOGUE_IDENTITY: DIALOGUE_IDENTITY_PROBE (0) "Logs all dialogue identity probes for this line."

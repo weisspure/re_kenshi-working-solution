@@ -67,43 +67,37 @@ All actions are available on `DIALOGUE`, `DIALOGUE_LINE`, and `WORD_SWAPS` items
 
 The number typed on the action row is `val0`. It is always read literally - `0` means `0`, there is no sentinel behavior.
 
-### Add skill levels
+### Train / untrain skill levels
 
 | Action key | Target |
 |---|---|
-| `add skill levels to speaker` | The character speaking the current line |
-| `add skill levels to target` | The conversation partner |
-| `add skill levels to owner` | The NPC who owns the dialogue package |
+| `train skill levels` | The line speaker resolved from the FCS `speaker` dropdown |
+| `untrain skill levels` | The line speaker resolved from the FCS `speaker` dropdown |
+| `train other skill levels` | The opposite dialogue side |
+| `untrain other skill levels` | The opposite dialogue side |
+| `train squad skill levels` | Every active member of the resolved line speaker's platoon |
+| `untrain squad skill levels` | Every active member of the resolved line speaker's platoon |
+| `train other squad skill levels` | Every active member of the opposite dialogue side's platoon |
+| `untrain other squad skill levels` | Every active member of the opposite dialogue side's platoon |
 
-`val0` = number of levels to add. Use a positive number.
+`val0` = number of levels to train or untrain. Use a positive number.
 
 The referenced record must be an `ADJUST_SKILL_LEVEL` record.
 
----
-
-### Remove skill levels
+### Train / untrain until a skill level
 
 | Action key | Target |
 |---|---|
-| `remove skill levels from speaker` | The character speaking the current line |
-| `remove skill levels from target` | The conversation partner |
-| `remove skill levels from owner` | The NPC who owns the dialogue package |
+| `train skill levels until` | The line speaker resolved from the FCS `speaker` dropdown |
+| `untrain skill levels until` | The line speaker resolved from the FCS `speaker` dropdown |
+| `train other skill levels until` | The opposite dialogue side |
+| `untrain other skill levels until` | The opposite dialogue side |
+| `train squad skill levels until` | Every active member of the resolved line speaker's platoon |
+| `untrain squad skill levels until` | Every active member of the resolved line speaker's platoon |
+| `train other squad skill levels until` | Every active member of the opposite dialogue side's platoon |
+| `untrain other squad skill levels until` | Every active member of the opposite dialogue side's platoon |
 
-`val0` = number of levels to remove. Use a positive number. The runtime negates it automatically.
-
-The referenced record must be an `ADJUST_SKILL_LEVEL` record.
-
----
-
-### Set skill level
-
-| Action key | Target |
-|---|---|
-| `set skill level for speaker` | The character speaking the current line |
-| `set skill level for target` | The conversation partner |
-| `set skill level for owner` | The NPC who owns the dialogue package |
-
-`val0` = the exact value to assign.
+`val0` = the exact value to assign. The "train" and "untrain" wording is for FCS readability: both set the stat exactly to `val0`.
 
 The referenced record must be a `SET_SKILL_LEVEL` record.
 
@@ -113,9 +107,28 @@ The referenced record must be a `SET_SKILL_LEVEL` record.
 
 | Target name | Resolved as |
 |---|---|
-| speaker | `dlg->getSpeaker(dialogLine->speaker, dialogLine, false)` - handles T_ME, T_TARGET, T_INTERJECTOR, etc. |
-| target | `dlg->getConversationTarget().getCharacter()` - the player in a typical NPC conversation |
-| owner | `dlg->me` - the NPC who owns the Dialogue object, regardless of who is speaking the current line |
+| speaker | `dlg->getSpeaker(dialogLine->speaker, dialogLine, false)` - asks Kenshi to resolve the line's `speaker` field, including roles such as `T_ME`, `T_TARGET`, `T_INTERJECTOR1`, `T_TARGET_IF_PLAYER`, `T_TARGET_WITH_RACE`, and `T_WHOLE_SQUAD`. |
+| target | `dlg->getConversationTarget().getCharacter()` - the current conversation/event target. This is often the player in player-initiated talk, but not always. |
+| owner | `dlg->me` - the character that owns the active dialogue/package, regardless of who is speaking the current line. |
+| other | The other main dialogue side: if the resolved speaker is owner, other is target. Otherwise, other is owner. |
+| speaker squad | Resolve `speaker`, then enumerate active characters in that character's platoon. |
+| other squad | Resolve `other`, then enumerate active characters in that character's platoon. |
 
-Actions fire for every dialogue line including NPC lines. The identity of speaker, target, and owner does not change based on which side of the conversation the line is on.
+Actions fire only after the dialogue line executes. The `speaker` role follows the line's authored `speaker` field at runtime. Root-node visual speech can still appear under the owner/NPC even when runtime speaker resolution picks a target-side character; child text nodes generally display under the resolved speaker.
+
+The public action API is speaker-first. Use the line's `speaker` dropdown to choose who trains or untrains. Use the `... other ...` actions when the line speaker is giving training to, or taking training from, the other main dialogue side.
+
+`other` means the character on the other side of the main conversation. It does not mean "anyone who is not speaking." If you need to affect an interjector or race-selected squadmate, make that character the line speaker and use the plain speaker action.
+
+`T_WHOLE_SQUAD` through `speaker` resolution means one Kenshi-selected character, not every squad member. In current probes it resolved owner/NPC-side. `T_TARGET_WITH_RACE` uses the line's `target race` list and may prevent the line from executing if no matching target-side character exists.
+
+Use the explicit `... squad ...` action keys when you want platoon-wide training or setting. Those actions do real platoon enumeration from the resolved speaker or other-side character instead of relying on the `T_WHOLE_SQUAD` speaker enum.
+
+---
+
+## FCS editor helper
+
+`StatModification_FCS.dll` is optional but recommended for authoring conditions. It teaches FCS Extended that this plugin's condition `tag` field is a StatModification skill enum value, so authors can pick an exposed stat by name instead of typing the integer enum value.
+
+Runtime behavior does not depend on the helper. The C++ plugin still reads the integer stored in the condition tag field.
 

@@ -1,0 +1,46 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Reindex Serena",
+            "type": "shell",
+            "command": "serena",
+            "args": [
+                "project",
+                "index"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Refresh Serena",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}\\tools\\refresh_serena.ps1"
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "My build task",
+            "type": "shell",
+            // Assign output file name with VSCode inner variables like ${fileBasename}
+            "command": "g++ -std=c++17 -Wshadow -Wall -o ${fileBasename} -g -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG",
+            "options": {},
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

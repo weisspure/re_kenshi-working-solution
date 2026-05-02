@@ -7,9 +7,9 @@ A RE_Kenshi runtime plugin that adds dialogue actions and comparison conditions 
 
 Allows FCS dialogue authors to write dialogue lines that:
 
-- **Add** a flat number of levels to a character's skill
-- **Remove** a flat number of levels from a character's skill
-- **Set** a character's skill to an exact value
+- **Train** a flat number of levels onto the line speaker or the other dialogue side
+- **Untrain** a flat number of levels from the line speaker or the other dialogue side
+- **Train/untrain until** an exact skill value
 - **Compare** skill levels between dialogue participants
 
 All of this is authored entirely in the FCS editor with no scripting required.
@@ -27,7 +27,7 @@ All of this is authored entirely in the FCS editor with no scripting required.
 
 The plugin hooks `Dialogue::_doActions` and `DialogLineData::checkTags` in the Kenshi runtime. Custom record types are defined in `fcs.def` and appear in the FCS editor under `Characters > Skill Adjustments` and `Characters > Skill Sets`. The plugin reads those records at runtime and applies the stat changes.
 
-No FCS C# plugin is required for the actions. Comparison conditions work without a C# plugin but display a raw number input for the stat tag field rather than a named dropdown.
+No FCS C# plugin is required for the actions. Comparison conditions work without the C# helper too, but `StatModification_FCS.dll` makes the condition stat tag field display as a named StatModification skill dropdown instead of a raw number input.
 
 ## Four record types
 
@@ -35,8 +35,8 @@ No FCS C# plugin is required for the actions. Comparison conditions work without
 |---|---|---|
 | `STAT_DEFINITION` | 3000 | Identifies which stat to target |
 | `CLAMP_PROFILE` | 3001 | Reusable clamping policy |
-| `ADJUST_SKILL_LEVEL` | 3002 | Configuration for add/remove actions |
-| `SET_SKILL_LEVEL` | 3003 | Configuration for set actions |
+| `ADJUST_SKILL_LEVEL` | 3002 | Configuration for train/untrain actions |
+| `SET_SKILL_LEVEL` | 3003 | Configuration for train/untrain until actions |
 
 And two comparison dialogue conditions:
 
@@ -45,5 +45,5 @@ And two comparison dialogue conditions:
 | `DC_STAT_LEVEL_COMPARE_UNMODIFIED` | 3004 | Compares two characters' raw base stat values |
 | `DC_STAT_LEVEL_COMPARE_MODIFIED` | 3005 | Compares two characters' effective stat values including bonuses |
 
-Single-character stat threshold checks are intentionally not duplicated in pass 1. Use BFrizzle's Dialogue conditions for those checks. A future pass may add improved threshold checks under new IDs if they support behavior Dialogue does not, such as squad-aware checks.
+Single-character stat threshold checks are not implemented in the current pass. Use BFrizzle's Dialogue conditions for those checks. A future pass may add threshold checks under new IDs if they add enough value, such as clearer logging or real squad-aware behavior.
 

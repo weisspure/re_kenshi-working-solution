@@ -2,16 +2,20 @@
 
 // DC_STAT_LEVEL_COMPARE_UNMODIFIED: compares two characters' raw base stats.
 // DC_STAT_LEVEL_COMPARE_MODIFIED: compares two characters' effective stats.
+// These are stricter stat-focused checks than the lightweight Dialogue demo
+// conditions: they compare participant-vs-participant whole visible stat levels
+// and the runtime fails closed/logs if condition data is malformed.
 //   tag  = StatsEnumerated integer -- the same stat is read from both characters.
 //   val0 = unused.
 //   who  = controls the left-hand side of the comparison.
 //          T_ME means: owner OP target (e.g. is the owner stronger than the target?)
+//          T_WHOLE_SQUAD means: owner-side OP target; it is not squad-wide.
 //          other values mean: target OP owner
 //   compareBy = the operator (equals / less than / more than).
 //
 // Single-character stat threshold checks are intentionally not duplicated here.
 // Use BFrizzle's Dialogue conditions for those in pass 1. A future pass may add
-// improved threshold checks with T_WHOLE_SQUAD support under new IDs.
+// improved threshold checks with real squad-aware behavior under new IDs.
 enum DialogConditionEnum { DC_STAT_LEVEL_COMPARE_UNMODIFIED=3004, DC_STAT_LEVEL_COMPARE_MODIFIED=3005 }
 
 // -----------------------------------------------------------------------
@@ -52,7 +56,7 @@ comments: "" multiline "Author-facing notes. Ignored by runtime."
 
 // -----------------------------------------------------------------------
 // ADJUST_SKILL_LEVEL
-// val0 = amount to add (add actions) or subtract (remove actions).
+// val0 = amount to add (train actions) or subtract (untrain actions).
 // stat  = reference to a STAT_DEFINITION record.
 // clamp profile = optional reference to a CLAMP_PROFILE record.
 //                 Leave empty for no clamping.
@@ -64,7 +68,7 @@ comments: "" multiline                     "Author-facing notes. Ignored by runt
 
 // -----------------------------------------------------------------------
 // SET_SKILL_LEVEL
-// val0 = value to assign exactly.
+// val0 = value to assign exactly (train/untrain until actions).
 // -----------------------------------------------------------------------
 [SET_SKILL_LEVEL]
 stat: STAT_DEFINITION (0)        "Which stat to set. Pick a STAT_DEFINITION record. Val 0 shown here is unused."
@@ -79,15 +83,20 @@ Characters:               CHARACTER
     Skill Sets:           SET_SKILL_LEVEL
 
 [DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
-add skill levels to speaker: ADJUST_SKILL_LEVEL (0) "Adds val0 levels to the current speaker. Use a positive number. 0 means 0."
-add skill levels to target:  ADJUST_SKILL_LEVEL (0) "Adds val0 levels to the conversation target. Use a positive number. 0 means 0."
-add skill levels to owner:   ADJUST_SKILL_LEVEL (0) "Adds val0 levels to the dialogue owner. Use a positive number. 0 means 0."
+train skill levels: ADJUST_SKILL_LEVEL (0) "Adds val0 to the FCS speaker dropdown's resolved character, not necessarily the visible UI speaker. Use a positive number. 0 means 0."
+untrain skill levels: ADJUST_SKILL_LEVEL (0) "Removes val0 from the FCS speaker dropdown's resolved character, not necessarily the visible UI speaker. Use a positive number. 0 means 0."
+train other skill levels: ADJUST_SKILL_LEVEL (0) "Adds val0 to the other main dialogue side: owner->target, otherwise->owner. Interjectors count as otherwise. 0 means 0."
+untrain other skill levels: ADJUST_SKILL_LEVEL (0) "Removes val0 from the other main dialogue side: owner->target, otherwise->owner. Interjectors count as otherwise. 0 means 0."
+train squad skill levels: ADJUST_SKILL_LEVEL (0) "Adds val0 to each active member of the FCS speaker dropdown's resolved platoon. Use a positive number. 0 means 0."
+untrain squad skill levels: ADJUST_SKILL_LEVEL (0) "Removes val0 from each active member of the FCS speaker dropdown's resolved platoon. Use a positive number. 0 means 0."
+train other squad skill levels: ADJUST_SKILL_LEVEL (0) "Adds val0 to each active member of the other main dialogue side's resolved platoon. Use a positive number. 0 means 0."
+untrain other squad skill levels: ADJUST_SKILL_LEVEL (0) "Removes val0 from each active member of the other main dialogue side's resolved platoon. Use a positive number. 0 means 0."
 
-remove skill levels from speaker: ADJUST_SKILL_LEVEL (0) "Removes val0 levels from the current speaker. Use a positive number. 0 means 0."
-remove skill levels from target:  ADJUST_SKILL_LEVEL (0) "Removes val0 levels from the conversation target. Use a positive number. 0 means 0."
-remove skill levels from owner:   ADJUST_SKILL_LEVEL (0) "Removes val0 levels from the dialogue owner. Use a positive number. 0 means 0."
-
-set skill level for speaker: SET_SKILL_LEVEL (0) "Sets the current speaker's skill to val0 exactly. 0 means 0."
-set skill level for target:  SET_SKILL_LEVEL (0) "Sets the conversation target's skill to val0 exactly. 0 means 0."
-set skill level for owner:   SET_SKILL_LEVEL (0) "Sets the dialogue owner's skill to val0 exactly. 0 means 0."
-
+train skill levels until: SET_SKILL_LEVEL (0) "Sets the FCS speaker dropdown's resolved character to val0 exactly. This may differ from the visible UI speaker. 0 means 0."
+untrain skill levels until: SET_SKILL_LEVEL (0) "Sets the FCS speaker dropdown's resolved character to val0 exactly. This may differ from the visible UI speaker. 0 means 0."
+train other skill levels until: SET_SKILL_LEVEL (0) "Sets the other dialogue side to val0 exactly. Use when raising them toward a target level. 0 means 0."
+untrain other skill levels until: SET_SKILL_LEVEL (0) "Sets the other dialogue side to val0 exactly. Use when lowering them toward a target level. 0 means 0."
+train squad skill levels until: SET_SKILL_LEVEL (0) "Sets each active member of the FCS speaker dropdown's resolved platoon to val0 exactly. 0 means 0."
+untrain squad skill levels until: SET_SKILL_LEVEL (0) "Sets each active member of the FCS speaker dropdown's resolved platoon to val0 exactly. 0 means 0."
+train other squad skill levels until: SET_SKILL_LEVEL (0) "Sets each active member of the other main dialogue side's resolved platoon to val0 exactly. 0 means 0."
+untrain other squad skill levels until: SET_SKILL_LEVEL (0) "Sets each active member of the other main dialogue side's resolved platoon to val0 exactly. 0 means 0."

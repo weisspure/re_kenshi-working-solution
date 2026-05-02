@@ -14,6 +14,36 @@ It does **not** try to cover every possible setup.
 
 ---
 
+## Optional AI / Serena code intelligence setup
+
+This repo includes optional helper files for people using AI coding tools, Serena, clangd, or other tools that understand `compile_commands.json`.
+
+You do **not** need this to build or run the Kenshi plugins. It is only here to make code navigation less painful once the repo and dependencies are already on disk.
+
+From the repo root, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\refresh_serena.ps1
+```
+
+That script:
+
+- regenerates `compile_commands.json` from the remaining Visual Studio C++ projects
+- infers the usual sibling deps folder when env vars are missing, such as `<parent>\<repo-name>_deps`
+- re-indexes Serena if the `serena` command is available on `PATH`
+
+If you only want the compile database and do not use Serena, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\generate_compile_commands.ps1
+```
+
+`compile_commands.json` is intentionally ignored by git because it contains local absolute paths. If you copy this repo and delete projects to make a smaller learning repo, run the script again and it will regenerate entries only for the remaining `*.vcxproj` files.
+
+In VS Code, the included task **Refresh Serena** runs the same refresh script.
+
+---
+
 ## Part 1. Set up dependencies and toolchain
 
 ## 1. What you should have before you start

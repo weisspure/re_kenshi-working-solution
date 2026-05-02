@@ -1,37 +1,35 @@
 ---
-applyTo: "**/*.cpp"
+applyTo: "StatModification_Extension/src/StatModification_Extension.cpp,StatModification_Extension/src/Conditions.cpp,DialogueIdentityProbe/src/**/*.cpp"
 ---
-# RE_Kenshi Runtime Plugin Patterns
+# RE_Kenshi Runtime Patterns
 
-## Hook pattern
+## Hook Pattern
 ```cpp
 static ReturnType (*orig)(Args...) = 0;
-static ReturnType hook(Args...) { /* custom logic */ orig(args); }
+static ReturnType hook(Args...) { /* custom logic */ return orig(args); }
 
-__declspec(dllexport) void startPlugin() {
-    if (KenshiLib::SUCCESS != KenshiLib::AddHook(
-            KenshiLib::GetRealAddress(&Class::method), &hook, &orig))
-    { ErrorLog("hook failed"); return; }
+__declspec(dllexport) void startPlugin()
+{
+	if (KenshiLib::SUCCESS != KenshiLib::AddHook(
+		KenshiLib::GetRealAddress(&Class::method), &hook, &orig))
+	{
+		ErrorLog("hook failed");
+		return;
+	}
 }
 ```
 
-## GameData field access
-Custom `fcs.def` fields land in: `bdata` (bool), `sdata` (string), `idata` (int), `fdata` (float).  
-Always guard: check iterator `!= end()` before accessing `->second`. Never call `.find()->second` blindly.  
-Use `auto` for Ogre iterator types - the full typedef is too noisy and adds nothing.
+## Hook Rules
+- Hook files must call the original function unless intentionally fail-closed for a proven reason.
+- Null original hook pointers must log and return instead of crashing.
+- `Dialogue::_doActions` proves line executed.
+- `DialogLineData::checkTags` proves candidate evaluation; can be noisy.
+- Our condition ID + malformed FCS data: log, return `false`; do not fall through as if condition absent.
 
-## GameDataReference
-`values` is a `TripleInt`, not a vector. Use `ref.values[0]`, `[1]`, `[2]`. No `.size()`.  
-Always null-check `ref.ptr` before use. `ptr` can be null on malformed records.
-
-## Dialogue identities - fixed, never swap
-- `Dialogue::me` = NPC/dialogue owner, always
-- `dlg->getConversationTarget().getCharacter()` = player, when using "Talk To Me" on NPC, is actually based on the target of first dialogue event that initiated convo. This hasn't really been tested outside of EV_TALK_TO_ME events/dialogues.
-- Current testing is mostly `EV_TALK_TO_ME`, player button-press initiated. For NPC-initiated or non-talk-to-me conversations, instrument temporary in-game hooks before relying on owner/target/speaker assumptions; behavior may be identical, but silent inversion bugs are plausible.
-- `_doActions` fires for every line; `checkTags` fires for condition evaluation, if stumble across something more effecient than `_doActions` to hook onto for dialoguge effect checks flag this to user, even if not relevant to ask.
-
-## lektor<> buffers
-APIs like `getCharactersInArea` fill a `lektor<>`. Must manually free after use:
-```cpp
-if (characters.stuff) free(characters.stuff);
-```
+## Runtime Data Rules
+- Custom `fcs.def` fields land in `GameData::bdata`, `sdata`, `idata`, and `fdata`.
+- Always check `.find(...) != end()` before reading map values.
+- `GameDataReference::values` is a `TripleInt`; use `[0]`, `[1]`, `[2]`, never `.size()`.
+- Always null-check `GameDataReference::ptr`; malformed records can be null.
+- Use `auto` for long Ogre/Kenshi iterator types when clearer.
+- APIs that fill `lektor<>` buffers may require manual `free(buffer.stuff)` after use.

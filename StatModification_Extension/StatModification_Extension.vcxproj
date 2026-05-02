@@ -86,7 +86,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="StatModification_Extension.cpp" />
+    <ClCompile Include="src\Actions.cpp" />
+    <ClCompile Include="src\Clamp.cpp" />
+    <ClCompile Include="src\ClampCore.cpp" />
+    <ClCompile Include="src\Conditions.cpp" />
+    <ClCompile Include="src\FcsData.cpp" />
+    <ClCompile Include="src\Logging.cpp" />
+    <ClCompile Include="src\StatModification_Extension.cpp" />
+    <ClCompile Include="src\Targets.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Actions.h" />
+    <ClInclude Include="src\Clamp.h" />
+    <ClInclude Include="src\ClampCore.h" />
+    <ClInclude Include="src\Conditions.h" />
+    <ClInclude Include="src\Constants.h" />
+    <ClInclude Include="src\FcsData.h" />
+    <ClInclude Include="src\Logging.h" />
+    <ClInclude Include="src\Targets.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

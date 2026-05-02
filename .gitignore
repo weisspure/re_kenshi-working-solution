@@ -117,6 +117,9 @@ ipch/
 *.vspx
 *.sap
 
+# Local clangd/Serena compilation database generated from Visual Studio projects.
+compile_commands.json
+
 # Visual Studio Trace Files
 *.e2e
 
@@ -360,3 +363,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+

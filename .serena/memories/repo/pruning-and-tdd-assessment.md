@@ -1,0 +1,4 @@
+- Repo can be pruned substantially: tools/generate_compile_commands.ps1 discovers remaining *.vcxproj files dynamically and refresh_serena.ps1 reindexes from current repo state.
+- Strong retained anchors: AGENTS.md, root README.md, StatModification_Extension/README.md, .github/instructions/{stat-modification,re-kenshi-runtime,dialogue-identity}.md, DialogueIdentityProbe/{README,FINDINGS,ASSERTIONS}.md.
+- DialogueIdentityProbe is evidence-only and should stay separate from StatModification runtime code.
+- For future TDD work, main missing piece is not runtime knowledge but explicit local test harness/docs for fast red-green cycles around pure logic extracted from hooks/targets/FCS parsing.

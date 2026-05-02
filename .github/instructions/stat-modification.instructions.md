@@ -1,95 +1,82 @@
-﻿---
-applyTo: "StatModification_Extension/**,wiki/**"
 ---
-# StatModification_Extension - Design Reference
+applyTo: "StatModification_Extension/src/**,StatModification_Extension/StatModification_Extension/fcs.def,StatModification_Extension/StatModification_Extension/FCS_extended.json,StatModification_Extension/StatModification_Extension/RE_Kenshi.json,StatModification_FCS/**,wiki/Home.md,wiki/For-Mod-Authors.md,wiki/For-Plugin-Authors.md,wiki/FCS-Schema-Reference.md,wiki/Conditions.md"
+---
+# StatModification_Extension Contract
 
-## Type IDs (fcs.def and C++ enum must match exactly)
+## Commands
+- Build runtime: `StatModification_Extension\build.bat`
+- Build FCS helper: `dotnet build StatModification_FCS/StatModification_FCS.csproj -c Release`
+- Runtime DLL output: `StatModification_Extension/x64/Release/StatModification_Extension.dll`
+- FCS helper output: `StatModification_FCS/bin/Release/net4.8/StatModification_FCS.dll`
+
+## Architecture
+- Entry: `src/StatModification_Extension.cpp`; installs `_doActions` + `checkTags` hooks only.
+- Actions: `src/Actions.cpp`; named FCS action dispatch + stat mutation.
+- Conditions: `src/Conditions.cpp`; comparison conditions + `checkTags_hook`.
+- Targets: `src/Targets.cpp`; speaker/other-side resolution.
+- Data: `src/FcsData.cpp`; FCS/GameData validation.
+- Clamp: `src/Clamp.cpp`; optional profiles; absent profile = unclamped.
+- Logging: `src/Logging.cpp`; RE_KENSHI messages; successful writes use `LogDebug` behind `ENABLE_DEBUG_LOGS`.
+- Constants: `src/Constants.h`; IDs, action strings, FCS field names. Keep magic strings there.
+- Editor helper: `StatModification_FCS/`; C# for FCS Extended only. Runtime must not depend on it.
+- Deploy package: `StatModification_Extension/StatModification_Extension/`; `fcs.def`, `RE_Kenshi.json`, `FCS_extended.json`, `.mod`.
+
+## IDs
 | Name | ID | Purpose |
-|---|---|---|
-| STAT_DEFINITION | 3000 | Which stat - memorable anchor, other plugins need this number |
-| CLAMP_PROFILE | 3001 | Clamping policy |
-| ADJUST_SKILL_LEVEL | 3002 | Add/remove actions |
-| SET_SKILL_LEVEL | 3003 | Set actions |
-| DC_STAT_LEVEL_COMPARE_UNMODIFIED | 3004 | Condition: compare two characters' base stats |
-| DC_STAT_LEVEL_COMPARE_MODIFIED | 3005 | Condition: compare two characters' effective stats |
+|---|---:|---|
+| `STAT_DEFINITION` | 3000 | Stat enum target; compatibility anchor |
+| `CLAMP_PROFILE` | 3001 | Optional clamp policy |
+| `ADJUST_SKILL_LEVEL` | 3002 | Train/untrain action config |
+| `SET_SKILL_LEVEL` | 3003 | Train/untrain-until action config |
+| `DC_STAT_LEVEL_COMPARE_UNMODIFIED` | 3004 | Compare base visible stat levels |
+| `DC_STAT_LEVEL_COMPARE_MODIFIED` | 3005 | Compare effective visible stat levels |
 
-Because this plugin is not released yet, keep custom enum IDs gapless unless there is a compatibility reason to preserve a retired value. This is a shared collision space; do not leave unused IDs just because an unreleased draft used them.
+Before first release, keep IDs gapless unless preserving compatibility with shipped data.
 
-## Design rules - do not regress
-- No stat whitelist - `STAT_DEFINITION.enum_value` cast directly to `StatsEnumerated`, no validation beyond rejecting STAT_NONE
-- No default clamping - absent clamp profile = unclamped; canonical records ship both clamped and unclamped variants
-- 0 means 0 - no sentinel behavior
-- No stringID fallback
-- No presets or default amounts
-- Explicit dispatcher - fixed named action keys, no dynamic registry
+## Non-Negotiable Behavior
+- No stat whitelist: cast `STAT_DEFINITION["enum value"]` to `StatsEnumerated`; reject only `STAT_NONE`.
+- No stringID fallback for runtime behavior.
+- No sentinel values: `0` means `0`.
+- No default clamp: absent `clamp profile` means unclamped.
+- Clamp ref must be `CLAMP_PROFILE`; wrong type logs and continues unclamped.
+- Missing/wrong FCS data, null ptrs, unsupported cases, malformed conditions: log clearly.
+- Use explicit named dispatchers; do not replace action handling with a dynamic registry.
 
-## Condition scope
-- Pass 1 only implements `DC_STAT_LEVEL_COMPARE_UNMODIFIED` (3004) and `DC_STAT_LEVEL_COMPARE_MODIFIED` (3005).
-- Do not add `DC_STAT_UNMODIFIED` or `DC_STAT_MODIFIED`. Those duplicate BFrizzle's Dialogue stat threshold checks and create FCS dropdown confusion when both plugins are loaded.
-- For single-character stat threshold checks, authors should use Dialogue's existing conditions.
-- Future pass: add improved threshold checks with `T_WHOLE_SQUAD` support under the next available IDs if we can make them meaningfully different from Dialogue's implementation.
+## Actions
+- Public action keys are speaker-first: `train skill levels`, `untrain skill levels`, `train skill levels until`, `untrain skill levels until`.
+- `... other ...` action keys target the other main dialogue side, not "any character who is not speaking".
+- `... squad ...` action keys target active platoon members for the resolved speaker or other-side anchor.
+- Other-side rule: resolve speaker/owner/target; if `speaker == owner`, other = target; else other = owner.
+- Adjust actions run before until/set; until/set overrides earlier adjustment on same line.
+- `T_WHOLE_SQUAD` via action speaker resolution = one Kenshi-selected `Character*`, not whole squad.
 
-## Compare condition `who` semantics (BFrizzle-compatible)
-- `T_ME` = owner (NPC) is left-hand side
-- Any other supported value = target (player) is left-hand side
-- Compare conditions (3004/3005): `who == T_ME` -> left=me, right=target; evaluates `left OP right`
-- `T_WHOLE_SQUAD` is not supported for our conditions yet - unresolved how `getConversationTarget().getCharacter()` behaves when dialogue target is a squad rather than an individual
+## Conditions
+- Current form: compare two participants, `left.stat OP right.stat`.
+- Stricter than BFrizzle Dialogue threshold checks, which compare one character to fixed value.
+- Compare visible whole levels: cast both stat floats to `int`; `90.1` and `90.5` both equal visible `90`.
+- `who == T_ME`: owner left side, `owner OP target`.
+- `who == T_WHOLE_SQUAD`: owner-side compatibility; warn not true squad aggregation.
+- Other supported `who`: target left side, `target OP owner`.
+- Future threshold IDs may use `3006/3007` if adding value beyond Dialogue: fail-closed logging or real squad support.
 
-## Dialogue identity testing caution
-- Testing so far is on `EV_TALK_TO_ME` paths, initiated by the player through a button press.
-- Other conversation paths are often initiated by the NPC from the FCS perspective. Do not assume `me`, `target`, `speaker`, or left/right condition semantics are identical there.
-- BFrizzle's Dialogue behavior is the de facto standard for single-character stat checks until this plugin proves a better implementation in game.
-- Before refining or replacing Dialogue-style condition logic, add temporary in-game instrumentation hooks and test non-`EV_TALK_TO_ME` paths. Silent inversion bugs are plausible if owner/target semantics differ.
-- `LOG_DIALOGUE_IDENTITY_SPIKE` in `StatModification_Extension.cpp` is a temporary compile-time switch for this. Keep it `false` for normal builds.
+## Compatibility
+- Custom stat mods can depend on this mod and author normal records.
+- Preferred soft-compat: separate patch mod depends on both mods; includes `STAT_DEFINITION`, optional `CLAMP_PROFILE`, example action records.
+- Advanced authors may squat on custom item types in own `fcs.def`; risky if schemas diverge; runtime works only when this plugin installed.
+- FCS helper dropdowns = editor sugar only.
+- Custom stats work in actions via `STAT_DEFINITION`; in conditions via raw `tag` ints.
+- Third-party condition dropdown UX: companion FCS helper DLLs should replace/register condition default for IDs `3004/3005`; may expose combined enum of built-in + custom stat ints.
+- Only one enum type can own a condition ID dropdown at a time.
+- Do not duck-type clamp profiles; explicit type check protects authors from wrong-record refs.
 
-## Suggested in-game identity spike records
-- Create clearly named dialogue lines/actions that encode their expected placement and target, for example `SM_TEST_EV_TALK_TO_ME_ACTION_SPEAKER_EXPECT_NPC`, `SM_TEST_EV_TALK_TO_ME_ACTION_TARGET_EXPECT_PLAYER`, and equivalents for NPC-initiated/non-talk-to-me paths.
-- Put one action per test line where possible so the RE_KENSHI log identifies the action key, resolved speaker, target, and owner without ambiguity.
-- Include a mixed-condition test line: one StatModification compare condition that should pass, one vanilla/BFrizzle condition that should fail, and one StatModification action. Expected result: the line/action does not execute. If the action fires, hook-chain or engine condition/action ordering is not what we expect.
-- Run the same tests with `who = T_ME` and a non-`T_ME` value for compare conditions to confirm left/right semantics.
+## Canonical Record Rules
+- Runtime stays open-ended for custom stats; do not turn canonical exclusions into a runtime whitelist.
+- Never ship canonical records for `STAT_NONE`, `STAT_END`, `STAT_WEAPONS`, `STAT_HIVEMEDIC`, `STAT_VET`, `STAT_MASSCOMBAT`, or `STAT_SURVIVAL`.
+- Do ship `STAT_FRIENDLY_FIRE` as "Precision Shooting"; it is a real trainable stat.
+- Use in-game names: `STAT_MEDIC` = "Field Medic", `STAT_SMITHING_BOW` = "Crossbow Smith".
 
-## Third-party custom stat compatibility
-- Easiest path: a custom-stat mod can depend on StatModification_Extension and author normal canonical records using this mod's FCS schema.
-- Recommended soft-compat path: ship a separate compatibility patch mod that depends on both mods. It should contain `STAT_DEFINITION` records for custom stats, optional `CLAMP_PROFILE` records, and optional example `ADJUST_SKILL_LEVEL` / `SET_SKILL_LEVEL` records.
-- Native soft support may be possible if another author deliberately declares this plugin's custom item types in their own `fcs.def` and ships contract-conforming records. This is hypothetical and untested. Warn this is advanced: it squats on shared enum IDs, can confuse FCS if schemas diverge, and still requires StatModification_Extension at runtime for actions/conditions to do anything.
-- Do not support duck-typed clamp profiles. Runtime should require referenced clamp records to have type `CLAMP_PROFILE` and log wrong types, then continue unclamped because clamping is optional.
-- No default clamp for external/custom stats. Authors must explicitly provide clamp profiles when clamped behavior is desired.
-
-## Excluded StatsEnumerated values
-These exclusions apply to canonical records shipped by StatModification_Extension. Do not turn this table into a runtime whitelist; runtime validation must remain open-ended for third-party custom stats and reject only `STAT_NONE`.
-
-| Value | Reason |
-|---|---|
-| STAT_NONE (0) | Sentinel - always reject |
-| STAT_WEAPONS (20) | Composite/aggregate, not directly trainable |
-| STAT_HIVEMEDIC (14) | Not in CharStats struct - never shipped, exclude |
-| STAT_VET (15) | Not in CharStats struct - never shipped, exclude |
-| STAT_MASSCOMBAT (31) | Internal, not player-facing, exclude |
-| STAT_SURVIVAL (33) | Internal, not player-facing, exclude |
-| STAT_END (39) | Sentinel - always reject |
-
-**STAT_FRIENDLY_FIRE (36) = "Precision Shooting" - confirmed real trainable stat, INCLUDE.**
-
-## In-game name corrections for canonical records
-- STAT_MEDIC (9) -> record name **"Field Medic"**
-- STAT_SMITHING_BOW (38) -> record name **"Crossbow Smith"**
-
-## Outstanding work
-- **Canonical .mod records** not yet authored: 34 STAT_DEFINITION records (one per trainable stat), 1 CLAMP_PROFILE ("Default 0-100"), example ADJUST_SKILL_LEVEL and SET_SKILL_LEVEL pairs (clamped + unclamped) for each stat
-- **StatModification_FCS C# project** not yet written - needed for named StatsEnumerated dropdown on condition `tag` field; conditions work without it (authors type integer)
-- **Squad target behavior** unresolved - what `getConversationTarget().getCharacter()` returns when dialogue target is a squad rather than an individual has not been tested
-
-## Deployment layout
-```
-Kenshi/mods/StatModification_Extension/
-  RE_Kenshi.json                  { "Plugins": ["StatModification_Extension.dll"] }
-  StatModification_Extension.dll  C++ runtime hooks
-  fcs.def                         schema
-  StatModification_Extension.mod  canonical records
-  [future] FCS_extended.json      { "FCS_Plugins": ["StatModification_FCS.dll"] }
-  [future] StatModification_FCS.dll
-```
-
-## Wiki pages (wiki/ directory)
-Home.md, For-Mod-Authors.md, Conditions.md, FCS-Schema-Reference.md, For-Plugin-Authors.md
-
+## Style
+- Keep C++ beginner-readable: guard clauses over nested `if`/`else`, one variable per declaration, `Type* name` pointer style.
+- Use Doxygen `@brief` comments on module-facing header functions.
+- Comment non-obvious FCS/runtime behavior; do not restate syntax.
+- Headers are internal project headers, not supported external C++ API.

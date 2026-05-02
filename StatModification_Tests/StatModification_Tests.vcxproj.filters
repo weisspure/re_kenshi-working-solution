@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Production">
+      <UniqueIdentifier>{899E2370-B266-4A62-BC67-12F257A6F201}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests">
+      <UniqueIdentifier>{80252413-EE2E-47C3-B88F-D4C6BE362241}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\StatModification_Extension\src\ClampCore.cpp">
+      <Filter>Production</Filter>
+    </ClCompile>
+    <ClCompile Include="Tests\ClampCoreTests.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\StatModification_Extension\src\ClampCore.h">
+      <Filter>Production</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
