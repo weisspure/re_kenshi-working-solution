@@ -1,0 +1,4 @@
+[DIALOGUE,DIALOGUE_LINE,WORD_SWAPS]
+change race: RACE (0) "Changes the FCS speaker dropdown's resolved character to the referenced RACE subrace, then opens the character editor. Val 0 is unused."
+change other race: RACE (0) "Changes the other main dialogue side to the referenced RACE subrace, then opens the character editor. Val 0 is unused."
+
