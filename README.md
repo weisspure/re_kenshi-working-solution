@@ -1,7 +1,7 @@
 ## KenshiLib Examples
 This repo contains example KenshiLib plugins.
 
-Requires [RE_Kenshi 0.3.1+](https://www.nexusmods.com/kenshi/mods/847?tab=files) and optionally [FCS extended](https://www.nexusmods.com/kenshi/mods/1825).
+Requires [RE_Kenshi 0.3.1+](https://www.nexusmods.com/kenshi/mods/847?tab=files) and optionally [FCS extended 1.0.3.0+](https://www.nexusmods.com/kenshi/mods/1825).
 
 ## Examples
 ### Hello World
@@ -27,6 +27,9 @@ Adds integer variables defined in the FCS, modified via dialogue events, that ca
 ### Plugin import / Plugin export
 Showcases communication between plugins/how plugins can export new APIs.
 
+### Character Highlight
+Source code for the character highlight mod, shows how to set material/shader properties.
+
 ## Compiling
 
 Requires Visual Studio 2019 or newer and the Visual C++ 2010 x64 compilers. KenshiLib plugins MUST be compiled using the Visual Studio 2010 compiler. Copies of Visual Studio 2010 can be found on the [Wayback Machine](https://archive.org/search?query=visual+studio+2010).
@@ -36,3 +39,5 @@ Requires Visual Studio 2019 or newer and the Visual C++ 2010 x64 compilers. Kens
 Other dependencies can be found here: https://github.com/BFrizzleFoShizzle/KenshiLib_Examples_deps
 
 Open the project and compile in RELEASE mode. DEBUG is currently broken.
+
+**If you have issues, a more detailed setup guide [can be found here](https://github.com/weisspure/re_kenshi-working-solution/blob/main/README.md).**
