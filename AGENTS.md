@@ -8,7 +8,7 @@ Read only what task needs. No bulk reads.
 - StatModification runtime: [StatModification_Extension/README.md](StatModification_Extension/README.md) -> [docs/agent-rules/stat-modification-contract.md](docs/agent-rules/stat-modification-contract.md) -> [docs/agent-rules/re-kenshi-runtime.md](docs/agent-rules/re-kenshi-runtime.md).
 - FCS/schema: [wiki/FCS-Schema-Reference.md](wiki/FCS-Schema-Reference.md) -> [docs/agent-rules/fcs-schema.md](docs/agent-rules/fcs-schema.md).
 - Dialogue identity evidence: [DialogueIdentityProbe/FINDINGS.md](DialogueIdentityProbe/FINDINGS.md) + [DialogueIdentityProbe/ASSERTIONS.md](DialogueIdentityProbe/ASSERTIONS.md) -> [docs/agent-rules/dialogue-identity.md](docs/agent-rules/dialogue-identity.md).
-- RaceChange runtime: [RaceChange_Extension/README.md](RaceChange_Extension/README.md) -> [RaceChange_Extension/AGENTS.md](RaceChange_Extension/AGENTS.md) -> [RaceChange_Extension/NEXT_AGENT_HANDOVER.md](RaceChange_Extension/NEXT_AGENT_HANDOVER.md) -> [RaceChange_Extension/TEST_PLAN.md](RaceChange_Extension/TEST_PLAN.md).
+- RaceChange runtime: [RaceChange_Extension/README.md](RaceChange_Extension/README.md) -> [RaceChange_Extension/AGENTS.md](RaceChange_Extension/AGENTS.md) -> [RaceChange_Extension/TEST_PLAN.md](RaceChange_Extension/TEST_PLAN.md). Active refactor only: also load [RaceChange_Extension/NEXT_AGENT_HANDOVER.md](RaceChange_Extension/NEXT_AGENT_HANDOVER.md).
 
 ## Supported Surfaces
 

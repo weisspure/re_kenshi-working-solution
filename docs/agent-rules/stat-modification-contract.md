@@ -2,11 +2,7 @@
 
 Use for: StatModification runtime/editor-helper code, schema files, and wiki contract docs.
 
-## Commands
-- Runtime build: `StatModification_Extension\build.bat`
-- FCS helper build: `dotnet build StatModification_FCS/StatModification_FCS.csproj -c Release`
-- Runtime output: `StatModification_Extension/x64/Release/StatModification_Extension.dll`
-- FCS helper output: `StatModification_FCS/bin/Release/net4.8/StatModification_FCS.dll`
+Build/deploy: see [build-and-deploy.md](build-and-deploy.md).
 
 ## Architecture
 - Entry hooks only in `src/StatModification_Extension.cpp`: `_doActions`, `checkTags`.

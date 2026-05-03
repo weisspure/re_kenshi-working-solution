@@ -1,13 +1,13 @@
 # RaceChange Agent Notes (Lean)
 
-Use this as router + invariants. Keep heavy rationale in `NEXT_AGENT_HANDOVER.md`.
+Use this as router + invariants. `NEXT_AGENT_HANDOVER.md` is for active refactor work only — do not load it by default.
 
 ## Read Order
 
 1. `README.md` (author-facing contract)
 2. `AGENTS.md` (this file)
-3. `NEXT_AGENT_HANDOVER.md` (deep cleanup plan)
-4. `TEST_PLAN.md` (runtime verification matrix)
+3. `TEST_PLAN.md` (runtime verification matrix)
+4. Active refactor only: `NEXT_AGENT_HANDOVER.md` (module layout, branch-collapse guidance, audit findings)
 
 ## Verify Before Claiming Safe
 
@@ -65,8 +65,19 @@ powershell -ExecutionPolicy Bypass -File tools/generate_compile_commands.ps1
 - Supported levels: `error`, `warning`, `info`, `debug`, `trace`.
 - Default threshold is code-defined in `src/Logging.h` (`RACE_CHANGE_LOG_DEFAULT`) unless runtime config is explicitly wired.
 
+## Pre-Change Inspection
+
+Run before proposing architecture changes:
+
+```powershell
+git status --short
+rg -n "static .*\(|ApplyRaceChangeRef|setRace|SpawnAnimalFromTemplate|FindAnimalTemplateForRace|RemoveAllInventoryItemsBeforeRaceChange|DropAllItems|RestoreRemovedInventoryItemsAfterRaceChange|validateInventorySections|activateCharacterEditMode|values\[0\]" RaceChange_Extension/src
+rg -n "AnimalRaceActions|ActionCore|RaceActions|FcsData|Logging|Targets" RaceChange_Extension/RaceChange_Extension.vcxproj
+rg -n "change race|change other race|animal|ANIMAL_CHARACTER|value\[0\]|setRace|character editor|inventory|slots" RaceChange_Extension wiki RaceChange_Tests
+RaceChange_Extension\build.bat
+```
+
 ## Maintenance Notes
 
 - Keep `README.md` human-facing and concise.
-- Keep deep agent migration/refactor narrative in `NEXT_AGENT_HANDOVER.md`.
 - Prefer code + test evidence over prose when docs disagree.

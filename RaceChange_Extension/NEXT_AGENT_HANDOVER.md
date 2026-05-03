@@ -62,14 +62,8 @@ As functions move, consider carefully where each one belongs and whether it shou
 
 ## Documentation Standard
 
-Keep docs split by audience:
-
-- `README.md`: human-facing plugin overview, action authoring basics, install, and verification links.
-- `AGENTS.md`: agent/maintainer memory, supported surfaces, current runtime behavior, logging internals, and cleanup direction.
-- `CLAUDE.md`: delegate to `AGENTS.md` unless there is a Claude-specific reason to diverge.
-- `NEXT_AGENT_HANDOVER.md`: temporary detailed cleanup handoff.
-
-Before broad edits to `CLAUDE.md` or `AGENTS.md`, check for the local `claude-md-improver` skill at `~/.agents/skills/claude-md-improver/SKILL.md` and follow it if present.
+- `README.md`: human-facing. `AGENTS.md`: agent/maintainer memory + runtime behavior. `NEXT_AGENT_HANDOVER.md`: cleanup handoff. `CLAUDE.md`: delegates to `AGENTS.md`.
+- Add Doxygen `@brief` on module-facing headers and implementation comments on non-obvious RE_Kenshi behavior as part of cleanup.
 
 Add Doxygen or implementation comments throughout the extension source as part of the cleanup.
 
