@@ -120,6 +120,9 @@ ipch/
 # Local clangd/Serena compilation database generated from Visual Studio projects.
 compile_commands.json
 
+# Local git worktrees used for isolated implementation branches.
+.worktrees/
+
 # Visual Studio Trace Files
 *.e2e
 
