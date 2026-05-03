@@ -177,6 +177,17 @@ static void TransferStatsToSpawnedAnimal(Character *source, Character *dest)
 	LogInfo("transferred stats to spawned animal | count=" + IntToString(transferred));
 }
 
+static void TransferCommonRuntimeStateToSpawnedAnimal(Character *source, Character *dest)
+{
+	if (source == 0 || dest == 0)
+		return;
+
+	float age = source->getAge();
+	dest->setAge(age);
+
+	LogInfo("transferred common runtime state to spawned animal | age=" + IntToString((int)age));
+}
+
 static RootObject *SpawnAnimalFromTemplate(Character *character, GameData *animalTemplate)
 {
 	if (ou == 0 || ou->theFactory == 0)
@@ -696,8 +707,10 @@ static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const 
 			}
 
 			Character *spawnedCharacter = static_cast<Character *>(spawned);
+
 			TransferNameToSpawnedAnimal(character, spawnedCharacter);
 			TransferStatsToSpawnedAnimal(character, spawnedCharacter);
+			TransferCommonRuntimeStateToSpawnedAnimal(character, spawnedCharacter);
 			ResetAppearanceDataForRace(spawnedCharacter, targetRace);
 			RefreshRaceDerivedInventory(spawnedCharacter);
 			OpenCharacterEditor(spawnedCharacter);
