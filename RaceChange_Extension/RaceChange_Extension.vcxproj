@@ -87,6 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\ActionCore.cpp" />
+    <ClCompile Include="src\actions\appearance\AppearanceActions.cpp" />
     <ClCompile Include="src\actions\inventory\InventoryActions.cpp" />
     <ClCompile Include="src\FcsData.cpp" />
     <ClCompile Include="src\Logging.cpp" />
@@ -96,6 +97,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ActionCore.h" />
+    <ClInclude Include="src\actions\appearance\AppearanceActions.h" />
     <ClInclude Include="src\actions\inventory\InventoryActions.h" />
     <ClInclude Include="src\FcsData.h" />
     <ClInclude Include="src\Logging.h" />
