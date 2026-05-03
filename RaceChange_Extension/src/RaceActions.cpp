@@ -9,6 +9,7 @@
 #include <kenshi/Dialogue.h>
 #include <kenshi/Enums.h>
 #include <kenshi/GameData.h>
+#include <kenshi/GameDataManager.h>
 #include <kenshi/GameWorld.h>
 #include <kenshi/Globals.h>
 #include <kenshi/AppearanceManager.h>
@@ -18,6 +19,7 @@
 #include <kenshi/RaceData.h>
 
 #include <cstdlib>
+#include <vector>
 
 static const bool ENABLE_ACTION_SCAN_LOGS = true;
 
@@ -133,6 +135,37 @@ static void LogRaceDiagnostics(GameData* targetRace)
 		LogWarning("target race has no runtime raceGroup; it may be absent from the vanilla editor race list | targetRace={" + DescribeGameData(targetRace) + "}");
 }
 
+static GameData* FindAnimalTemplateForRace(GameData* targetRace)
+{
+	if (targetRace == 0 || ou == 0)
+		return 0;
+
+	lektor<GameData*> matches;
+	ou->gamedata.findAllDataThatReferencesThis(matches, targetRace, ANIMAL_CHARACTER, "race");
+
+	if (matches.size() == 0)
+	{
+		if (matches.stuff != 0)
+			free(matches.stuff);
+		return 0;
+	}
+
+	GameData* animalTemplate = matches[0];
+	if (matches.size() > 1)
+	{
+		LogWarning(
+			"multiple animal templates reference target race; using first match"
+			" | count=" + IntToString((int)matches.size()) +
+			" | targetRace={" + DescribeGameData(targetRace) + "}" +
+			" | firstAnimalTemplate={" + DescribeGameData(animalTemplate) + "}");
+	}
+
+	if (matches.stuff != 0)
+		free(matches.stuff);
+
+	return animalTemplate;
+}
+
 static void OpenCharacterEditor(Character* character)
 {
 	if (ou == 0 || ou->player == 0)
@@ -145,10 +178,25 @@ static void OpenCharacterEditor(Character* character)
 	ou->player->activateCharacterEditMode(character);
 }
 
-static void UnequipArmourBeforeRaceChange(Character* character)
+static std::string DescribeItemState(Item* item, Inventory* inventory)
 {
+	if (item == 0)
+		return "item=null";
+
+	return
+		"item={" + DescribeGameData(item->data) + "}" +
+		" | ptr=" + PointerToString(item) +
+		" | section=\"" + item->inventorySection + "\"" +
+		" | equipped=" + std::string(item->isEquipped ? "true" : "false") +
+		" | inInventory=" + std::string(item->isInInventory ? "true" : "false") +
+		" | inventoryHasItem=" + std::string(inventory != 0 && inventory->hasItem(item) ? "true" : "false");
+}
+
+static std::vector<Item*> RemoveArmourBeforeRaceChange(Character* character)
+{
+	std::vector<Item*> removedItems;
 	if (character == 0 || character->getInventory() == 0)
-		return;
+		return removedItems;
 
 	lektor<Item*> armour;
 	armour.maxSize = 0;
@@ -157,9 +205,10 @@ static void UnequipArmourBeforeRaceChange(Character* character)
 
 	character->getInventory()->getEquippedArmour(armour);
 	if (armour.size() == 0)
-		return;
+		return removedItems;
 
-	LogInfo("unequipping armour before race change | character={" + DescribeCharacter(character) + "} | count=" + IntToString((int)armour.size()));
+	Inventory* inventory = character->getInventory();
+	LogInfo("removing equipped armour before race change | character={" + DescribeCharacter(character) + "} | count=" + IntToString((int)armour.size()));
 
 	for (int i = 0; i < (int)armour.size(); ++i)
 	{
@@ -169,9 +218,9 @@ static void UnequipArmourBeforeRaceChange(Character* character)
 
 		std::string section = item->inventorySection;
 		LogInfo(
-			"unequipping armour item"
+			"preparing armour item for race change"
 			" | section=\"" + section + "\"" +
-			" | item={" + DescribeGameData(item->data) + "}");
+			" | " + DescribeItemState(item, inventory));
 
 		character->unequipItem(section, item);
 
@@ -180,12 +229,60 @@ static void UnequipArmourBeforeRaceChange(Character* character)
 				"armour item still reports equipped after unequip attempt"
 				" | section=\"" + section + "\"" +
 				" | item={" + DescribeGameData(item->data) + "}");
+
+		Item* removed = inventory->removeItemDontDestroy_returnsItem(item, item->quantity, false);
+		if (removed == 0)
+		{
+			LogWarning(
+				"could not remove armour item from inventory without destroying it"
+				" | section=\"" + section + "\"" +
+				" | " + DescribeItemState(item, inventory));
+			continue;
+		}
+
+		LogInfo(
+			"removed armour item without destroying it"
+			" | originalSection=\"" + section + "\"" +
+			" | " + DescribeItemState(removed, inventory));
+		removedItems.push_back(removed);
 	}
 
 	if (armour.stuff != 0)
 		free(armour.stuff);
 
-	character->getInventory()->refreshGui();
+	inventory->refreshGui();
+	return removedItems;
+}
+
+static void RestoreRemovedArmourAfterRaceChange(Character* character, const std::vector<Item*>& removedItems)
+{
+	if (character == 0 || character->getInventory() == 0 || removedItems.empty())
+		return;
+
+	Inventory* inventory = character->getInventory();
+	LogInfo("restoring removed armour after race change | character={" + DescribeCharacter(character) + "} | count=" + IntToString((int)removedItems.size()));
+
+	for (std::vector<Item*>::const_iterator it = removedItems.begin(); it != removedItems.end(); ++it)
+	{
+		Item* item = *it;
+		if (item == 0)
+			continue;
+
+		LogInfo("restoring armour item after race change | before={" + DescribeItemState(item, inventory) + "}");
+
+		bool added = inventory->addItem(item, item->quantity, true, false);
+		if (!added)
+		{
+			LogWarning(
+				"could not restore armour item to inventory; addItem was called with dropOnFail=true and destroyOnFail=false"
+				" | after={" + DescribeItemState(item, inventory) + "}");
+			continue;
+		}
+
+		LogInfo("restored armour item after race change | after={" + DescribeItemState(item, inventory) + "}");
+	}
+
+	inventory->refreshGui();
 }
 
 static bool ResetAppearanceDataForRace(Character* character, GameData* targetRace)
@@ -250,6 +347,7 @@ static void RefreshRaceDerivedInventory(Character* character)
 static void ApplyRaceChangeRef(Dialogue* dlg, DialogLineData* dialogLine, const GameDataReference& ref, const std::string& actionKey)
 {
 	GameData* targetRace = ref.ptr;
+	RaceChangeIntent intent = GetRaceChangeIntent(ref.values[0]);
 	RaceChangeTargetRole role = GetRaceChangeActionRole(actionKey);
 	if (role == RACE_CHANGE_ROLE_UNKNOWN)
 	{
@@ -285,18 +383,52 @@ static void ApplyRaceChangeRef(Dialogue* dlg, DialogLineData* dialogLine, const 
 	if (!CanApplyRaceChangeAction(character != 0, targetRace != 0, (int)targetRace->type == (int)RACE))
 		return;
 
+	if (intent == RACE_CHANGE_INTENT_UNSUPPORTED)
+	{
+		LogError(
+			"unsupported race change intent value"
+			" | action=" + actionKey +
+			" | val0=" + IntToString(ref.values[0]) +
+			" | character={" + DescribeCharacter(character) + "}" +
+			" | targetRace={" + DescribeGameData(targetRace) + "}");
+		return;
+	}
+
 	LogRaceDiagnostics(targetRace);
+
+	if (intent == RACE_CHANGE_INTENT_ANIMAL)
+	{
+		GameData* animalTemplate = FindAnimalTemplateForRace(targetRace);
+		if (animalTemplate == 0)
+		{
+			LogWarning(
+				"animal transform intent could not find an ANIMAL_CHARACTER template referencing target race; refusing"
+				" | action=" + actionKey +
+				" | character={" + DescribeCharacter(character) + "}" +
+				" | targetRace={" + DescribeGameData(targetRace) + "}");
+			return;
+		}
+
+		LogWarning(
+			"animal transform intent found ANIMAL_CHARACTER template but spawn-and-migrate is not implemented; refusing"
+			" | action=" + actionKey +
+			" | character={" + DescribeCharacter(character) + "}" +
+			" | targetRace={" + DescribeGameData(targetRace) + "}" +
+			" | animalTemplate={" + DescribeGameData(animalTemplate) + "}");
+		return;
+	}
 
 	GameData* beforeRace = GetRaceGameData(character);
 	LogInfo(
 		"changing race"
 		" | action=" + actionKey +
 		" | role=" + RaceChangeRoleToString(role) +
+		" | intent=" + RaceChangeIntentToString(intent) +
 		" | character={" + DescribeCharacter(character) + "}" +
 		" | beforeRace={" + DescribeGameData(beforeRace) + "}" +
 		" | targetRace={" + DescribeGameData(targetRace) + "}");
 
-	UnequipArmourBeforeRaceChange(character);
+	std::vector<Item*> removedArmour = RemoveArmourBeforeRaceChange(character);
 	character->setRace(targetRace);
 
 	GameData* afterRace = GetRaceGameData(character);
@@ -308,6 +440,7 @@ static void ApplyRaceChangeRef(Dialogue* dlg, DialogLineData* dialogLine, const 
 
 	ResetAppearanceDataForRace(character, targetRace);
 	RefreshRaceDerivedInventory(character);
+	RestoreRemovedArmourAfterRaceChange(character, removedArmour);
 
 	OpenCharacterEditor(character);
 }

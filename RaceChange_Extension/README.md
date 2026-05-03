@@ -7,13 +7,18 @@ It is intentionally separate from `StatModification_Extension`. The public autho
 - `change race`
 - `change other race`
 
+The action reference value controls transform intent:
+
+- `0`: humanoid/playable race mutation through the current working path.
+- `1`: experimental animal/non-humanoid intent. The plugin looks for an `ANIMAL_CHARACTER` template whose `race` list references the target `RACE`, logs the match if found, and refuses before mutation until a safe spawn-and-migrate path exists.
+
 Runtime behavior:
 
 1. Hooks `Dialogue::_doActions`.
 2. Resolves the dialogue target using the same speaker-first model as `StatModification_Extension`.
 3. Validates that the referenced record is a `RACE`.
 4. Logs current race, target race, resolved character, and basic race diagnostics.
-5. Unequips worn armour before the race mutation so items in slots the target race cannot use are not silently destroyed by inventory validation.
+5. Removes worn armour before the race mutation without destroying it, then tries to restore it after inventory validation with destruction disabled.
 6. Calls `Character::setRace(targetRace)`.
 7. Creates and assigns fresh appearance data for the target race.
 8. Validates inventory sections so race-derived equipment slots refresh without a save reload.

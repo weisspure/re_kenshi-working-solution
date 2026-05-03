@@ -33,3 +33,15 @@ BOOST_AUTO_TEST_CASE(race_change_validation_matches_vanilla_editor_entry_shape)
 	BOOST_CHECK(!CanApplyRaceChangeAction(true, false, true));
 	BOOST_CHECK(!CanApplyRaceChangeAction(true, true, false));
 }
+
+BOOST_AUTO_TEST_CASE(race_change_reference_value_selects_transform_intent)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_INTENT_HUMANOID, GetRaceChangeIntent(0));
+	BOOST_CHECK_EQUAL(RACE_CHANGE_INTENT_ANIMAL, GetRaceChangeIntent(1));
+}
+
+BOOST_AUTO_TEST_CASE(unsupported_race_change_reference_values_fail_closed)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_INTENT_UNSUPPORTED, GetRaceChangeIntent(-1));
+	BOOST_CHECK_EQUAL(RACE_CHANGE_INTENT_UNSUPPORTED, GetRaceChangeIntent(2));
+}
