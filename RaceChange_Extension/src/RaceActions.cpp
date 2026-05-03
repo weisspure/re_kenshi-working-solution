@@ -61,9 +61,9 @@ static void LogActionScan(DialogLineData *dialogLine, GameData *lineData, bool h
 		std::string(hasRaceChangeAction ? "true" : "false") +
 		" | line={" + DescribeGameData(lineData) + "}" +
 		" | lineName=\"" + (dialogLine != 0 ? dialogLine->getName() : "null") + "\"" +
-		" | text0=\"" + GetStringField(lineData, "text0") + "\"" +
+		" | text0=\"" + GetFcsStringField(lineData, "text0") + "\"" +
 		" | speaker=" + IntToString(dialogLine != 0 ? (int)dialogLine->speaker : -1) +
-		" | objectReferences=" + DescribeObjectReferenceKeys(lineData));
+		" | objectReferences=" + DescribeFcsObjectReferenceKeys(lineData));
 }
 
 static void LogRaceDiagnostics(GameData *targetRace)
@@ -469,7 +469,7 @@ static bool ResetAppearanceDataForRace(Character *character, GameData *targetRac
 		" | character={" +
 		DescribeCharacter(character) + "}" +
 		" | beforeAppearance={" + DescribeGameData(beforeAppearance) + "}" +
-		" | beforeAppearanceRace={" + DescribeFirstReference(beforeAppearance, "race") + "}" +
+		" | beforeAppearanceRace={" + DescribeFirstFcsReference(beforeAppearance, "race") + "}" +
 		" | targetRace={" + DescribeGameData(targetRace) + "}");
 
 	GameDataCopyStandalone *appearance = appearanceManager->createAppearanceData(targetRace);
@@ -488,7 +488,7 @@ static bool ResetAppearanceDataForRace(Character *character, GameData *targetRac
 		"prepared replacement appearance data"
 		" | appearance={" +
 		DescribeGameData(appearance) + "}" +
-		" | appearanceRace={" + DescribeFirstReference(appearance, "race") + "}" +
+		" | appearanceRace={" + DescribeFirstFcsReference(appearance, "race") + "}" +
 		" | targetRace={" + DescribeGameData(targetRace) + "}");
 
 	character->setAppearanceData(appearance);
@@ -498,7 +498,7 @@ static bool ResetAppearanceDataForRace(Character *character, GameData *targetRac
 		" | character={" +
 		DescribeCharacter(character) + "}" +
 		" | afterAppearance={" + DescribeGameData(character->getAppearanceData()) + "}" +
-		" | afterAppearanceRace={" + DescribeFirstReference(character->getAppearanceData(), "race") + "}" +
+		" | afterAppearanceRace={" + DescribeFirstFcsReference(character->getAppearanceData(), "race") + "}" +
 		" | targetRace={" + DescribeGameData(targetRace) + "}");
 
 	return true;

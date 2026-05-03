@@ -14,7 +14,7 @@ Ogre::vector<GameDataReference>::type* FindReferences(GameData* data, const std:
 	return &it->second;
 }
 
-std::string GetStringField(GameData* data, const std::string& key)
+std::string GetFcsStringField(GameData* data, const std::string& key)
 {
 	if (data == 0)
 		return "";
@@ -26,7 +26,7 @@ std::string GetStringField(GameData* data, const std::string& key)
 	return it->second;
 }
 
-std::string DescribeObjectReferenceKeys(GameData* data)
+std::string DescribeFcsObjectReferenceKeys(GameData* data)
 {
 	if (data == 0)
 		return "lineData=null";
@@ -54,7 +54,7 @@ std::string DescribeObjectReferenceKeys(GameData* data)
 	return result;
 }
 
-std::string DescribeFirstReference(GameData* data, const std::string& key)
+std::string DescribeFirstFcsReference(GameData* data, const std::string& key)
 {
 	if (data == 0)
 		return "data=null";

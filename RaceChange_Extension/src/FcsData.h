@@ -8,10 +8,10 @@
 Ogre::vector<GameDataReference>::type* FindReferences(GameData* data, const std::string& key);
 
 /** Read a string field from GameData, returning an empty string for null or missing keys. */
-std::string GetStringField(GameData* data, const std::string& key);
+std::string GetFcsStringField(GameData* data, const std::string& key);
 
 /** Describe all object reference lists on a record for action-scan diagnostics. */
-std::string DescribeObjectReferenceKeys(GameData* data);
+std::string DescribeFcsObjectReferenceKeys(GameData* data);
 
 /** Describe the first reference for a field key, including values and resolved pointer. */
-std::string DescribeFirstReference(GameData* data, const std::string& key);
+std::string DescribeFirstFcsReference(GameData* data, const std::string& key);
