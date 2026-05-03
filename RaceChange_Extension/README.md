@@ -2,34 +2,22 @@
 
 `RaceChange_Extension` is a small RE_Kenshi proof-of-concept plugin for dialogue-driven race/subrace changes.
 
-It is intentionally separate from `StatModification_Extension`. The public authoring surface is two direct dialogue actions that reference existing `RACE` subrace records:
+It adds two direct dialogue actions that reference existing `RACE` subrace records:
 
 - `change race`
 - `change other race`
 
 The action reference value controls transform intent:
 
-- `0`: humanoid/playable race mutation through the current working path.
-- `1`: experimental animal/non-humanoid intent. The plugin looks for an `ANIMAL_CHARACTER` template whose `race` list references the target `RACE`, logs the match if found, and refuses before mutation until a safe spawn-and-migrate path exists.
-
-Runtime behavior:
-
-1. Hooks `Dialogue::_doActions`.
-2. Resolves the dialogue target using the same speaker-first model as `StatModification_Extension`.
-3. Validates that the referenced record is a `RACE`.
-4. Logs current race, target race, resolved character, and basic race diagnostics.
-5. Removes worn armour before the race mutation without destroying it, then tries to restore it after inventory validation with destruction disabled.
-6. Calls `Character::setRace(targetRace)`.
-7. Creates and assigns fresh appearance data for the target race.
-8. Validates inventory sections so race-derived equipment slots refresh without a save reload.
-9. Opens the vanilla character editor through `PlayerInterface::activateCharacterEditMode(character)`.
-
-The first runtime dry run showed that `Character::setRace(...)` alone updates race-derived state such as limb HP, but can leave stale editor appearance data behind. The plugin now resets appearance data before opening the editor.
+- `0`: humanoid/playable race change.
+- `1`: experimental animal/non-humanoid intent. When the plugin can find a matching animal template, it spawns an animal replacement instead of only changing the live humanoid's race data.
 
 ## Known Limitations
 
-- This proof of concept is intended for humanoid/playable race changes. Changing a live humanoid character to a non-humanoid race can update race stats, but the runtime object is still the original `CharacterHuman`, so equipment-slot layout can remain human-like until reload or behave inconsistently.
-- Worn armour is unequipped before changing race. If the character inventory has no room, vanilla inventory behavior decides whether the item can be placed or dropped.
+- This is a proof of concept. Test on a throwaway save.
+- Animal transforms are intentionally modest: name, stats, and known common runtime state are moved to the spawned animal, but this is not full character migration.
+- If animal intent cannot find a matching `ANIMAL_CHARACTER` template, the plugin falls back to the in-place race-change path.
+- Animal replacement drops evacuated inventory items to the ground before destroying the source character.
 
 ## Install
 

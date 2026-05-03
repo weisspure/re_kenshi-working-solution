@@ -7,6 +7,7 @@ Lazy-load only needed docs. Do not bulk-read spike/setup docs unless task asks.
 - Build/env: [README.md](README.md); deeper duplicate/expanded guide: [RE_KENSHI setup/README.md](RE_KENSHI%20setup/README.md).
 - Runtime/plugin examples: [HelloWorld](HelloWorld/README.md), [NewPlugin](NewPlugin/README.md), [KillButton](KillButton/README.md), [SkillIncrease](SkillIncrease/README.md), [Dialogue](Dialogue/README.md), [WorldStates](WorldStates/README.md).
 - StatModification overview: [StatModification_Extension/README.md](StatModification_Extension/README.md).
+- RaceChange human overview: [RaceChange_Extension/README.md](RaceChange_Extension/README.md); agent notes: [RaceChange_Extension/AGENTS.md](RaceChange_Extension/AGENTS.md); cleanup handover: [RaceChange_Extension/NEXT_AGENT_HANDOVER.md](RaceChange_Extension/NEXT_AGENT_HANDOVER.md).
 
 ## Supported Surfaces
 
@@ -16,6 +17,7 @@ Lazy-load only needed docs. Do not bulk-read spike/setup docs unless task asks.
 - `StatModification_FCS/` is editor support for FCS Extended only. Runtime behavior must not depend on the C# helper being present.
 - Internal `src/` helper layout, C++ function names, and hook implementation details are not a public API unless a file explicitly says otherwise.
 - `PluginExport/` and `PluginImport/` show direct DLL import/export coupling between plugins. Treat that as an experiment, not as a recommended ecosystem contract.
+- `RaceChange_Extension` is intentionally separate from `StatModification_Extension`. Treat its public authoring surface as the direct dialogue action keys and `RACE` references documented in `RaceChange_Extension/README.md` and `RaceChange_Extension/AGENTS.md`, not as part of the StatModification compatibility contract.
 
 ## If You Prune The Repo
 
@@ -56,6 +58,7 @@ Lazy-load only needed docs. Do not bulk-read spike/setup docs unless task asks.
 - Mod docs: `wiki/For-Mod-Authors.md` + `wiki/Conditions.md` + `wiki/FCS-Schema-Reference.md`.
 - Plugin compatibility: `wiki/For-Plugin-Authors.md` + `StatModification_Extension/README.md`.
 - Dialogue targeting: `DialogueIdentityProbe/FINDINGS.md` + `DialogueIdentityProbe/ASSERTIONS.md` + `dialogue-identity.instructions.md`.
+- RaceChange runtime/cleanup: `RaceChange_Extension/AGENTS.md` -> `RaceChange_Extension/NEXT_AGENT_HANDOVER.md` -> `RaceChange_Extension/TEST_PLAN.md`.
 
 ## C++ Code Intelligence
 

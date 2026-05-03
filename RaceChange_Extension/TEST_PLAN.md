@@ -11,6 +11,8 @@ Covered by `RaceChange_Tests/run_tests.bat`:
 - Unknown action keys are not treated as race-change actions.
 - Only the public race-change action keys are recognized.
 - The plugin's local validation gate only blocks missing character, missing race reference, or wrong referenced type.
+- `value[0]` classifies `0` as humanoid/default intent and `1` as animal intent.
+- Logging level names parse case-insensitively and filtering emits only the configured threshold and more severe messages.
 
 Not covered by unit tests:
 
@@ -19,6 +21,7 @@ Not covered by unit tests:
 - `Character::setRace(...)` persistence and side effects.
 - Character editor safety from inside `_doActions`.
 - Appearance reset behavior.
+- Animal template lookup, spawning, state transplant, source-character destruction, and inventory drop behavior.
 - Save/reload behavior.
 
 ## Dry Run Setup
@@ -71,7 +74,8 @@ Run these as separate throwaway-save tests:
 Optional edge probes:
 
 - A playable but editor-ungrouped subrace such as Fishman, if available.
-- A non-humanoid subrace such as Bonedog, in a disposable save only. This is a documented limitation: the runtime object can remain a `CharacterHuman`, so equipment slots may remain human-like until reload or behave inconsistently.
+- A non-humanoid subrace such as Bonedog with `value[0] == 1`, in a disposable save only. Expected current behavior is spawn-and-replace when an `ANIMAL_CHARACTER` template references the target race; if no template is found, the fallback in-place mutation can retain the old `CharacterHuman` object limitation.
+- An invalid or unsupported animal-template case, to confirm the fallback is logged and does not destroy the source character before a replacement exists.
 - A subrace with no known editor limits file, in a disposable test mod only.
 - Root dialogue line vs child dialogue line, because dialogue identity differs by line position.
 
@@ -83,10 +87,12 @@ Capture:
 
 - FCS line location and speaker setting.
 - Action key and referenced `RACE`.
+- `value[0]` intent, especially whether animal tests use `1`.
 - Character before race/subrace.
 - Log lines from `RaceChange: changing race` through editor invocation.
 - Whether the editor opened.
 - Whether the editor displayed/reset appearance for the target subrace.
+- For animal replacement, whether inventory was dropped, the spawned template matched the target race, supported state was transplanted, the source was destroyed only after spawn success, and the editor opened for the spawned character.
 - What happened after cancel/accept.
 - Save/reload result.
 

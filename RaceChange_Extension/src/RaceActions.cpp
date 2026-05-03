@@ -25,8 +25,6 @@
 #include <cstdlib>
 #include <vector>
 
-static const bool ENABLE_ACTION_SCAN_LOGS = true;
-
 static GameData *GetRaceGameData(Character *character)
 {
 	if (character == 0)
@@ -112,10 +110,10 @@ static void SetSingleRaceReference(GameData *appearance, GameData *targetRace)
 
 static void LogActionScan(DialogLineData *dialogLine, GameData *lineData, bool hasRaceChangeAction)
 {
-	if (!ENABLE_ACTION_SCAN_LOGS)
-		return;
-
-	LogInfo(
+	// Dialogue lines can carry many object reference lists unrelated to RaceChange.
+	// Keep this behind trace logging so support builds can inspect FCS shape without
+	// spamming normal players on every dialogue action.
+	LogTrace(
 		"action scan"
 		" | hasRaceChangeAction=" +
 		std::string(hasRaceChangeAction ? "true" : "false") +
@@ -151,6 +149,12 @@ static void TransferNameToSpawnedAnimal(Character *source, Character *dest)
 	LogInfo("transferred name to spawned animal | name=\"" + name + "\"");
 }
 
+/**
+ * Animal replacement intentionally transplants only the modest state we have verified:
+ * name, stat values, and small common runtime fields. This is not a full character
+ * migration layer; add new transfers only after an in-game check proves the field is
+ * safe to read from the source and write to the spawned animal.
+ */
 static void TransferStatsToSpawnedAnimal(Character *source, Character *dest)
 {
 	CharStats *srcStats = source->getStats();
@@ -221,6 +225,13 @@ static RootObject *SpawnAnimalFromTemplate(Character *character, GameData *anima
 	return spawned;
 }
 
+/**
+ * Animal intent is authored against a target RACE, but Kenshi needs an ANIMAL_CHARACTER
+ * template to create a real animal object. `findAllDataThatReferencesThis` fills a
+ * lektor buffer for us, but it does not manage that buffer's lifetime after the call.
+ * Always copy out the pointer we need and release `matches.stuff` before returning;
+ * otherwise a repeated dialogue action can leak memory every time it scans templates.
+ */
 static GameData *FindAnimalTemplateForRace(GameData *targetRace)
 {
 	if (targetRace == 0 || ou == 0)
@@ -395,6 +406,11 @@ static void RestoreRemovedInventoryItemsAfterRaceChange(Character *character, co
 	inventory->refreshGui();
 }
 
+/**
+ * Humanoid/playable race changes preserve policy differently from animal replacement:
+ * only armour is evacuated before setRace, then returned with destroyOnFail=false after
+ * inventory sections have been validated for the new race.
+ */
 static std::vector<Item *> RemoveArmourBeforeRaceChange(Character *character)
 {
 	std::vector<Item *> removedItems;
@@ -551,10 +567,17 @@ static void RefreshRaceDerivedInventory(Character *character)
 	if (character == 0)
 		return;
 
+	// This is not just UI polish. Runtime testing showed stale race-derived slots until
+	// Kenshi rebuilt inventory sections, especially around equipment and editor refresh.
 	LogInfo("validating inventory sections after race change | character={" + DescribeCharacter(character) + "}");
 	character->validateInventorySections();
 }
 
+/**
+ * Animal replacement drops evacuated items instead of restoring them because the source
+ * character is about to be destroyed and humanoid equipment slots should not be carried
+ * onto the spawned animal object.
+ */
 static void DropAllItems(Character *character, const std::vector<Item *> &items)
 {
 	if (character == 0 || character->getInventory() == 0 || items.empty())
@@ -582,6 +605,9 @@ static void DropAllItems(Character *character, const std::vector<Item *> &items)
 static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const GameDataReference &ref, const std::string &actionKey)
 {
 	GameData *targetRace = ref.ptr;
+	// `value[0]` is part of the public FCS authoring contract now:
+	// 0 means humanoid/default in-place mutation, 1 requests animal spawn-and-replace.
+	// Do not reinterpret additional values without treating it as a compatibility change.
 	RaceChangeIntent intent = GetRaceChangeIntent(ref.values[0]);
 	RaceChangeTargetRole role = GetRaceChangeActionRole(actionKey);
 	if (role == RACE_CHANGE_ROLE_UNKNOWN)
@@ -675,6 +701,9 @@ static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const 
 
 	if (intent == RACE_CHANGE_INTENT_ANIMAL)
 	{
+		// The animal path is intentionally separate. It must create the replacement first,
+		// move the supported state onto it, open the editor for that final character, and
+		// only then destroy the source.
 		GameData *animalTemplate = FindAnimalTemplateForRace(targetRace);
 		if (animalTemplate == 0)
 		{
@@ -742,6 +771,9 @@ static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const 
 
 	std::vector<Item *> removedArmour;
 	std::vector<Item *> removedInventoryItems;
+	// The fallback in-place path still matters when animal intent has no template.
+	// Preserve the distinction between full inventory evacuation and armour-only
+	// evacuation; they are different product policies, not interchangeable cleanup.
 	if (useFullInventoryPivot)
 		removedInventoryItems = RemoveAllInventoryItemsBeforeRaceChange(character);
 	else
