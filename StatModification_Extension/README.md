@@ -34,7 +34,7 @@ The nested `StatModification_Extension/` folder is the Kenshi mod package folder
 - Read code comments when you want runtime details: hook chaining, target resolution, FCS reference contracts, and failure behavior live beside the code they explain.
 - Read this README for project overview, supported features, and design principles.
 - Read the wiki for mod-author guidance and FCS authoring workflow.
-- Read `.github/instructions/` for project rules that future coding agents should preserve.
+- Read `docs/agent-rules/` for project rules that future coding agents should preserve.
 
 ## Custom Item Types
 

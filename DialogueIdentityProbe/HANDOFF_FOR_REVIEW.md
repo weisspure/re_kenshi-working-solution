@@ -23,7 +23,7 @@ When a marked line executes, the plugin logs `phase=context`, `phase=lineList`, 
 - `DialogueIdentityProbe/ASSERTIONS.md`
 - `DialogueIdentityProbe/LOG_AUDIT.md`
 - `DialogueIdentityProbe/README.md`
-- `.github/instructions/re-kenshi-runtime.instructions.md`
+- `docs/agent-rules/re-kenshi-runtime.md`
 - `DialogueIdentityProbe/src/DialogueIdentityProbe.cpp`
 
 FCS/runtime schema files:
@@ -172,7 +172,7 @@ Please review the Kenshi dialogue identity proof-of-concept in this repo.
 Start with:
 - DialogueIdentityProbe/HANDOFF_FOR_REVIEW.md
 - DialogueIdentityProbe/README.md
-- .github/instructions/re-kenshi-runtime.instructions.md
+- docs/agent-rules/re-kenshi-runtime.md
 - DialogueIdentityProbe/src/DialogueIdentityProbe.cpp
 
 Then inspect logs:

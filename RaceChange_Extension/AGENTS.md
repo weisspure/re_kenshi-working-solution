@@ -1,77 +1,72 @@
-# RaceChange Agent Notes
+# RaceChange Agent Notes (Lean)
 
-This file is for coding agents and maintainers. Keep `README.md` human-facing: what the plugin does, how to author the FCS actions, how to build/install, and where to verify. Put implementation hazards, cleanup direction, logging internals, and future-agent memory here or in `NEXT_AGENT_HANDOVER.md`.
+Use this as router + invariants. Keep heavy rationale in `NEXT_AGENT_HANDOVER.md`.
 
-Before broad edits to `CLAUDE.md` or `AGENTS.md`, check for the local `claude-md-improver` skill at `~/.agents/skills/claude-md-improver/SKILL.md` and follow it if present. It is not required for normal code changes.
+## Read Order
 
-## Commands
+1. `README.md` (author-facing contract)
+2. `AGENTS.md` (this file)
+3. `NEXT_AGENT_HANDOVER.md` (deep cleanup plan)
+4. `TEST_PLAN.md` (runtime verification matrix)
 
-Use these checks before claiming RaceChange work is safe:
+## Verify Before Claiming Safe
 
 ```powershell
 RaceChange_Extension\build.bat
 RaceChange_Tests\run_tests.bat
 ```
 
-After file moves, source splits/merges, `*.vcxproj` edits, include-path/dependency changes, or large C++ refactors, refresh code intelligence from the repo root:
+After broad C++ moves/refactors or `.vcxproj` edits:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/generate_compile_commands.ps1
 ```
 
-## Public Surface
+## Public Authoring Contract
 
-- `RaceChange_Extension` is intentionally separate from `StatModification_Extension`.
-- The public authoring surface is two direct dialogue action keys:
-  - `change race`
-  - `change other race`
-- Each action references an existing `RACE` subrace record.
-- `value[0]` is part of the authoring contract:
-  - `0`: humanoid/playable in-place mutation path.
-  - `1`: animal/non-humanoid intent. The runtime looks for an `ANIMAL_CHARACTER` template whose `race` list references the target `RACE`.
-- Treat new `value[0]` meanings as compatibility changes, not internal refactors.
+- Public keys: `change race`, `change other race`.
+- References must target a `RACE` record.
+- `value[0]` meanings are compatibility surface:
+  - `0` = humanoid/default in-place path
+  - `1` = animal intent path (template lookup via `ANIMAL_CHARACTER.race`)
+- Treat new `value[0]` values as product contract changes.
 
-## Runtime Behavior
+## Runtime Path Contract
 
-Current high-level flow:
+- Hook point: `Dialogue::_doActions`.
+- Resolve target character using speaker-first runtime model.
+- Validate referenced race type before mutation/replacement.
+- Humanoid/default intent:
+  - remove armour
+  - `setRace(targetRace)`
+  - reset appearance
+  - validate inventory sections
+  - restore armour (no destroy)
+  - open character editor
+- Animal intent with valid template:
+  - evacuate full inventory and drop
+  - spawn animal template
+  - transfer supported state (name/stats/common runtime)
+  - validate spawned inventory sections
+  - open editor for spawned character
+  - destroy source only after replacement is ready
+- Animal intent with no template: log fallback, run in-place path.
 
-1. Hook `Dialogue::_doActions`.
-2. Resolve the dialogue target using the same speaker-first model as `StatModification_Extension`.
-3. Validate that the referenced record is a `RACE`.
-4. Log current race, target race, resolved character, and basic race diagnostics.
-5. Classify humanoid/default intent or animal intent from `value[0]`.
-6. For humanoid/default intent, remove worn armour without destroying it, call `Character::setRace(targetRace)`, reset appearance data, validate inventory sections, restore removed armour with destruction disabled, and open the vanilla character editor through `PlayerInterface::activateCharacterEditMode(character)`.
-7. For animal intent with a matching `ANIMAL_CHARACTER` template, remove all inventory items, drop them to the ground, spawn the animal template, transplant the supported state, destroy the source character after replacement is ready, validate the spawned character's inventory sections, and open the character editor for the spawned character.
-8. For animal intent without a matching template, fall back to the in-place mutation path after logging that no animal template was found.
+## Non-Negotiable Boundaries
 
-## Known Runtime Boundaries
+- Animal replacement is not full migration unless proven by code/tests.
+- Full-inventory drop path is not equivalent to humanoid armour-only policy.
+- `validateInventorySections()` and editor reopen are behavior-critical.
+- `RaceChange_Extension` compatibility is separate from StatModification.
 
-- Animal replacement is intentionally modest. It transplants name, stats, and known common runtime state; do not describe it as full character migration unless code and tests prove that.
-- Missing or malformed animal template data falls back to in-place mutation, which can still behave like the old non-humanoid limitation.
-- Humanoid/playable race changes unequip worn armour before changing race. If inventory has no room, vanilla inventory behavior decides whether the item can be placed or dropped.
-- Animal replacement evacuates all inventory items and drops them to the ground before source-character destruction. This is intentional and not equivalent to the humanoid armour-restore policy.
-- `validateInventorySections()` and `activateCharacterEditMode(...)` are part of the observed working runtime flow, not cosmetic cleanup.
+## Logging Policy
 
-## Logging
+- Central filtered logging only; no ad hoc toggles.
+- Supported levels: `error`, `warning`, `info`, `debug`, `trace`.
+- Default threshold is code-defined in `src/Logging.h` (`RACE_CHANGE_LOG_DEFAULT`) unless runtime config is explicitly wired.
 
-RaceChange logs through RE_Kenshi logging functions with a central level filter. This KenshiLib build exposes `DebugLog` and `ErrorLog`; the wrapper keeps semantic levels at call sites while routing non-error messages through `DebugLog`.
+## Maintenance Notes
 
-Current default threshold: `info`.
-
-Supported level names:
-
-- `error`
-- `warning`
-- `info`
-- `debug`
-- `trace`
-
-Names parse case-insensitively. Runtime config loading is not wired yet; changing the default currently requires editing `RACE_CHANGE_LOG_DEFAULT` in `src/Logging.h`.
-
-Keep debug/trace call sites behind the central filter. Do not reintroduce ad hoc toggles such as `ENABLE_ACTION_SCAN_LOGS`.
-
-## Cleanup Route
-
-Use `NEXT_AGENT_HANDOVER.md` as the detailed cleanup plan. That handover is agent-facing and may be more current than public docs during refactors. Prefer code and logs over prose when they disagree.
-
-Use `TEST_PLAN.md` for runtime dry-run coverage and expected `RE_Kenshi.log` evidence. Unit tests cover only pure decisions; they do not prove in-game hook, inventory, editor, spawn, or source-destruction behavior.
+- Keep `README.md` human-facing and concise.
+- Keep deep agent migration/refactor narrative in `NEXT_AGENT_HANDOVER.md`.
+- Prefer code + test evidence over prose when docs disagree.

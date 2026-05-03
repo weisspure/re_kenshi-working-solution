@@ -17,8 +17,8 @@ Read only the relevant docs first:
 
 - AGENTS.md
 - RaceChangePOC/FINDINGS.md
-- .github/instructions/re-kenshi-runtime.instructions.md
-- .github/instructions/fcs-schema.instructions.md
+- docs/agent-rules/re-kenshi-runtime.md
+- docs/agent-rules/fcs-schema.md
 - StatModification_Extension/README.md
 - DialogueIdentityProbe/FINDINGS.md
 
