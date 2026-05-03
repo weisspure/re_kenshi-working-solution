@@ -25,7 +25,9 @@ Adds integer variables defined in the FCS, modified via dialogue events, that ca
 [Readme](WorldStates/README.md).
 
 ### Plugin import / Plugin export
-Showcases communication between plugins/how plugins can export new APIs.
+Showcases communication between plugins/how plugins can export new APIs, as well as the `PreloadPlugin` system for early plugin loading.
+
+[Readme](PluginExport/Readme.md).
 
 ### Character Highlight
 Source code for the character highlight mod, shows how to set material/shader properties.
