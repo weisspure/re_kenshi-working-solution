@@ -47,6 +47,99 @@ static void LogRaceDiagnostics(GameData *targetRace)
 		LogWarning("target race has no runtime raceGroup; it may be absent from the vanilla editor race list | targetRace={" + DescribeGameData(targetRace) + "}");
 }
 
+static bool ValidateRaceChangeReference(Character *character, GameData *targetRace, const std::string &actionKey, RaceChangeTargetRole role)
+{
+	if (character == 0)
+	{
+		LogError("could not resolve target character | action=" + actionKey + " | role=" + RaceChangeRoleToString(role));
+		return false;
+	}
+
+	if (targetRace == 0)
+	{
+		LogError("race reference is null | action=" + actionKey + " | character={" + DescribeCharacter(character) + "}");
+		return false;
+	}
+
+	if ((int)targetRace->type != (int)RACE)
+	{
+		LogError(
+			"wrong item type for race change action"
+			" | action=" +
+			actionKey +
+			" | expected=" + IntToString((int)RACE) +
+			" | got=" + IntToString((int)targetRace->type) +
+			" | targetRace={" + DescribeGameData(targetRace) + "}");
+		return false;
+	}
+
+	return CanApplyRaceChangeAction(character != 0, targetRace != 0, (int)targetRace->type == (int)RACE);
+}
+
+static bool RunAnimalReplacement(Character *character, GameData *targetRace, GameData *animalTemplate, const std::string &actionKey)
+{
+	// The animal path must create the replacement, move only verified state, open the
+	// editor for that final character, and only then destroy the source.
+	std::vector<Item *> removedInventoryItems = RemoveAllInventoryItemsBeforeRaceChange(character);
+	DropEvacuatedInventoryItems(character, removedInventoryItems);
+
+	RootObject *spawned = SpawnAnimalFromTemplate(character, animalTemplate);
+	if (spawned == 0)
+	{
+		LogError(
+			"animal spawn failed; aborting animal transform"
+			" | action=" +
+			actionKey +
+			" | character={" + DescribeCharacter(character) + "}"
+			" | targetRace={" + DescribeGameData(targetRace) + "}"
+			" | animalTemplate={" + DescribeGameData(animalTemplate) + "}");
+		return false;
+	}
+
+	Character *spawnedCharacter = static_cast<Character *>(spawned);
+	TransferSupportedStateToSpawnedAnimal(character, spawnedCharacter);
+	ResetAppearanceDataForRace(spawnedCharacter, targetRace);
+	RefreshRaceDerivedInventory(spawnedCharacter);
+	OpenCharacterEditor(spawnedCharacter);
+	DestroySourceAfterAnimalReplacement(character, spawnedCharacter);
+	return true;
+}
+
+static void RunInPlaceRaceMutation(Character *character, GameData *targetRace, RaceChangePath path, RaceChangeIntent intent, const std::string &actionKey)
+{
+	std::vector<Item *> removedArmour;
+	std::vector<Item *> removedInventoryItems;
+
+	// Animal fallback and animal-template humanoid pivots deliberately use the full
+	// inventory policy. Plain humanoid race changes preserve the narrower armour policy.
+	if (path == RACE_CHANGE_PATH_IN_PLACE_FULL_INVENTORY)
+		removedInventoryItems = RemoveAllInventoryItemsBeforeRaceChange(character);
+	else
+		removedArmour = RemoveArmourBeforeRaceChange(character);
+
+	character->setRace(targetRace);
+
+	GameData *afterRace = GetCharacterRaceGameData(character);
+	LogInfo(
+		"changed race"
+		" | action=" +
+		actionKey +
+		" | character={" + DescribeCharacter(character) + "}"
+		" | afterRace={" + DescribeGameData(afterRace) + "}");
+
+	ResetAppearanceDataForRace(character, targetRace);
+	RefreshRaceDerivedInventory(character);
+
+	if (intent == RACE_CHANGE_INTENT_ANIMAL)
+		DropEvacuatedInventoryItems(character, removedInventoryItems);
+	else if (path == RACE_CHANGE_PATH_IN_PLACE_FULL_INVENTORY)
+		RestoreRemovedInventoryItemsAfterRaceChange(character, removedInventoryItems);
+	else
+		RestoreRemovedArmourAfterRaceChange(character, removedArmour);
+
+	OpenCharacterEditor(character);
+}
+
 static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const GameDataReference &ref, const std::string &actionKey)
 {
 	GameData *targetRace = ref.ptr;
@@ -62,32 +155,7 @@ static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const 
 	}
 
 	Character *character = ResolveRaceChangeTarget(dlg, dialogLine, role);
-
-	if (character == 0)
-	{
-		LogError("could not resolve target character | action=" + actionKey + " | role=" + RaceChangeRoleToString(role));
-		return;
-	}
-
-	if (targetRace == 0)
-	{
-		LogError("race reference is null | action=" + actionKey + " | character={" + DescribeCharacter(character) + "}");
-		return;
-	}
-
-	if ((int)targetRace->type != (int)RACE)
-	{
-		LogError(
-			"wrong item type for race change action"
-			" | action=" +
-			actionKey +
-			" | expected=" + IntToString((int)RACE) +
-			" | got=" + IntToString((int)targetRace->type) +
-			" | targetRace={" + DescribeGameData(targetRace) + "}");
-		return;
-	}
-
-	if (!CanApplyRaceChangeAction(character != 0, targetRace != 0, (int)targetRace->type == (int)RACE))
+	if (!ValidateRaceChangeReference(character, targetRace, actionKey, role))
 		return;
 
 	if (intent == RACE_CHANGE_INTENT_UNSUPPORTED)
@@ -104,22 +172,18 @@ static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const 
 
 	LogRaceDiagnostics(targetRace);
 
-	bool useFullInventoryPivot = (intent == RACE_CHANGE_INTENT_ANIMAL);
-	if (intent == RACE_CHANGE_INTENT_HUMANOID)
+	GameData *animalTemplate = FindAnimalTemplateForRace(targetRace);
+	RaceChangePath path = SelectRaceChangePath(intent, animalTemplate != 0);
+	if (intent == RACE_CHANGE_INTENT_HUMANOID && path == RACE_CHANGE_PATH_IN_PLACE_FULL_INVENTORY)
 	{
-		GameData *inventoryPivotProbe = FindAnimalTemplateForRace(targetRace);
-		if (inventoryPivotProbe != 0)
-		{
-			useFullInventoryPivot = true;
-			LogInfo(
-				"inventory handling pivot enabled for race change"
-				" | action=" +
-				actionKey +
-				" | reason=targetRaceHasAnimalTemplate"
-				" | targetRace={" +
-				DescribeGameData(targetRace) + "}" +
-				" | pivotTemplate={" + DescribeGameData(inventoryPivotProbe) + "}");
-		}
+		LogInfo(
+			"inventory handling pivot enabled for race change"
+			" | action=" +
+			actionKey +
+			" | reason=targetRaceHasAnimalTemplate"
+			" | targetRace={" +
+			DescribeGameData(targetRace) + "}"
+			" | pivotTemplate={" + DescribeGameData(animalTemplate) + "}");
 	}
 
 	if (intent == RACE_CHANGE_INTENT_ANIMAL)
@@ -140,89 +204,28 @@ static void ApplyRaceChangeRef(Dialogue *dlg, DialogLineData *dialogLine, const 
 		actionKey +
 		" | role=" + RaceChangeRoleToString(role) +
 		" | intent=" + RaceChangeIntentToString(intent) +
+		" | path=" + RaceChangePathToString(path) +
 		" | character={" + DescribeCharacter(character) + "}" +
 		" | beforeRace={" + DescribeGameData(beforeRace) + "}" +
 		" | targetRace={" + DescribeGameData(targetRace) + "}");
 
-	if (intent == RACE_CHANGE_INTENT_ANIMAL)
+	if (intent == RACE_CHANGE_INTENT_ANIMAL && animalTemplate == 0)
 	{
-		// The animal path is intentionally separate. It must create the replacement first,
-		// move the supported state onto it, open the editor for that final character, and
-		// only then destroy the source.
-		GameData *animalTemplate = FindAnimalTemplateForRace(targetRace);
-		if (animalTemplate == 0)
-		{
-			LogWarning(
-				"animal intent had no ANIMAL_CHARACTER template; falling back to in-place mutation"
-				" | action=" +
-				actionKey +
-				" | character={" + DescribeCharacter(character) + "}"
-																  " | targetRace={" +
-				DescribeGameData(targetRace) + "}");
-		}
-		else
-		{
-			std::vector<Item *> removedInventoryItems = RemoveAllInventoryItemsBeforeRaceChange(character);
-			DropEvacuatedInventoryItems(character, removedInventoryItems);
-
-			RootObject *spawned = SpawnAnimalFromTemplate(character, animalTemplate);
-			if (spawned == 0)
-			{
-				LogError(
-					"animal spawn failed; aborting animal transform"
-					" | action=" +
-					actionKey +
-					" | character={" + DescribeCharacter(character) + "}"
-																	  " | targetRace={" +
-					DescribeGameData(targetRace) + "}"
-												   " | animalTemplate={" +
-					DescribeGameData(animalTemplate) + "}");
-				return;
-			}
-
-			Character *spawnedCharacter = static_cast<Character *>(spawned);
-
-			TransferSupportedStateToSpawnedAnimal(character, spawnedCharacter);
-			ResetAppearanceDataForRace(spawnedCharacter, targetRace);
-			RefreshRaceDerivedInventory(spawnedCharacter);
-			OpenCharacterEditor(spawnedCharacter);
-
-			DestroySourceAfterAnimalReplacement(character, spawnedCharacter);
-
-			return;
-		}
+		LogWarning(
+			"animal intent had no ANIMAL_CHARACTER template; falling back to in-place mutation"
+			" | action=" +
+			actionKey +
+			" | character={" + DescribeCharacter(character) + "}"
+			" | targetRace={" + DescribeGameData(targetRace) + "}");
 	}
 
-	std::vector<Item *> removedArmour;
-	std::vector<Item *> removedInventoryItems;
-	// The fallback in-place path still matters when animal intent has no template.
-	// Preserve the distinction between full inventory evacuation and armour-only
-	// evacuation; they are different product policies, not interchangeable cleanup.
-	if (useFullInventoryPivot)
-		removedInventoryItems = RemoveAllInventoryItemsBeforeRaceChange(character);
-	else
-		removedArmour = RemoveArmourBeforeRaceChange(character);
-	character->setRace(targetRace);
+	if (path == RACE_CHANGE_PATH_ANIMAL_REPLACEMENT)
+	{
+		RunAnimalReplacement(character, targetRace, animalTemplate, actionKey);
+		return;
+	}
 
-	GameData *afterRace = GetCharacterRaceGameData(character);
-	LogInfo(
-		"changed race"
-		" | action=" +
-		actionKey +
-		" | character={" + DescribeCharacter(character) + "}" +
-		" | afterRace={" + DescribeGameData(afterRace) + "}");
-
-	ResetAppearanceDataForRace(character, targetRace);
-	RefreshRaceDerivedInventory(character);
-
-	if (intent == RACE_CHANGE_INTENT_ANIMAL)
-		DropEvacuatedInventoryItems(character, removedInventoryItems);
-	else if (useFullInventoryPivot)
-		RestoreRemovedInventoryItemsAfterRaceChange(character, removedInventoryItems);
-	else
-		RestoreRemovedArmourAfterRaceChange(character, removedArmour);
-
-	OpenCharacterEditor(character);
+	RunInPlaceRaceMutation(character, targetRace, path, intent, actionKey);
 }
 
 static void TryApplyRaceChangeAction(Dialogue *dlg, DialogLineData *dialogLine, GameData *lineData, const std::string &actionKey)
