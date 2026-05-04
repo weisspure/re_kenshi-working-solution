@@ -17,7 +17,7 @@ Run these before proposing architecture changes. They are meant to make the next
 
 ```powershell
 git status --short
-rg -n "static .*\\(|ApplyRaceChangeRef|setRace|SpawnAnimalFromTemplate|FindAnimalTemplateForRace|RemoveAllInventoryItemsBeforeRaceChange|DropAllItems|RestoreRemovedInventoryItemsAfterRaceChange|validateInventorySections|activateCharacterEditMode|values\\[0\\]" RaceChange_Extension/src
+rg -n "static .*\\(|ApplyRaceChangeRef|setRace|SpawnAnimalFromTemplate|FindAnimalTemplateForRace|RemoveAllInventoryItemsBeforeRaceChange|DropEvacuatedInventoryItems|RestoreRemovedInventoryItemsAfterRaceChange|validateInventorySections|activateCharacterEditMode|values\\[0\\]" RaceChange_Extension/src
 rg -n "AnimalRaceActions|ActionCore|RaceActions|FcsData|Logging|Targets" RaceChange_Extension/RaceChange_Extension.vcxproj
 rg -n "change race|change other race|animal|ANIMAL_CHARACTER|value\\[0\\]|setRace|character editor|inventory|slots" RaceChange_Extension wiki RaceChange_Tests
 RaceChange_Extension\build.bat
@@ -91,18 +91,18 @@ Rules:
 
 ## Module Direction
 
-Use extraction with behavior-preserving commits. A reasonable destination shape:
+The first rearchitecture pass has been applied. Current shape:
 
-- `src/core/FcsData.*`: null-safe `GameData` helpers, string-field reads, object-reference lookup/formatting.
-- `src/core/Logging.*`: log level config, log filtering, string descriptions, diagnostic formatting.
-- `src/core/ActionCore.*`: public action keys, role mapping, validation gates, intent parsing, pure path/policy decisions.
-- `src/runtime/Targets.*`: dialogue target resolution.
-- `src/runtime/InventoryActions.*`: armour/full-inventory evacuation, restore, drop, and item state logging.
-- `src/runtime/AppearanceActions.*`: appearance data reset and race reference update.
-- `src/runtime/AnimalRaceActions.*`: animal template lookup, spawn, name/stat/common-state migration, source destroy.
+- `src/FcsData.*`: null-safe `GameData` helpers, string-field reads, object-reference lookup/formatting.
+- `src/Logging.*`: log level config, log filtering, string descriptions, diagnostic formatting.
+- `src/ActionCore.*`: public action keys, role mapping, validation gates, intent parsing, pure path/policy decisions.
+- `src/Targets.*`: dialogue target resolution.
+- `src/actions/inventory/InventoryActions.*`: armour/full-inventory evacuation, restore, drop, and item state logging.
+- `src/actions/appearance/AppearanceActions.*`: appearance data reset and race reference update.
+- `src/actions/animal/AnimalRaceActions.*`: animal template lookup, spawn, name/stat/common-state migration, source destroy.
 - `src/RaceActions.*`: dispatcher/orchestrator only.
 
-Do not do all of this in one patch. Extract one boundary, build, and inspect diffs before continuing.
+Future cleanup should continue in behavior-preserving commits. Extract or rename one boundary, build, and inspect diffs before continuing.
 
 After file moves or project edits, update `RaceChange_Extension.vcxproj` and refresh code intelligence if needed:
 
@@ -255,14 +255,19 @@ For the animal case, verify in the game and log:
 - `RaceChange_Extension/build.bat` builds the DLL. Check whether your test environment loads `x64/Release/RaceChange_Extension.dll` or a copied mod-folder DLL.
 - Keep unrelated repo cleanup out of this work. This extension is a proof of concept and runtime behavior matters more than tidy file counts.
 
-## Suggested Next Step
+## Current Refactor Status
 
-The safest useful first cleanup sequence:
+Completed in the first rearchitecture pass:
 
-1. Reconcile `README.md` with the current spawn-and-replace animal behavior.
-2. Add Doxygen comments to the current public headers so intent is captured before moving code.
-3. Add or update pure tests around `value[0]` intent parsing, action-key targeting, and any new pure path-selection helper.
-4. Introduce log levels in `Logging.*`, replacing ad hoc scan-log toggles, with tests for filtering.
-5. Extract low-risk `FcsData`/diagnostic helpers, adding tests as each helper moves.
-6. Split inventory, appearance, and animal replacement helpers into runtime modules.
-7. Only then reshape `ApplyRaceChangeRef` into early-return orchestration with named path helpers.
+1. README and agent notes were reconciled with spawn-and-replace animal behavior before this handover was updated.
+2. Pure tests now cover path selection for humanoid, animal replacement, animal fallback, and unsupported intent.
+3. Log level parsing/filtering exists in `Logging.*`.
+4. FCS diagnostic helpers were extracted to `FcsData.*` with FCS-specific names.
+5. Inventory, appearance, and animal replacement helpers were split into `src/actions/*`.
+6. `ApplyRaceChangeRef` now reads as validation, path selection, and named path execution.
+
+Remaining useful work:
+
+- Run the manual in-game matrix in `TEST_PLAN.md`; unit tests do not prove runtime hook, inventory, editor, spawn, or source-destruction behavior.
+- Consider whether `FcsData`, `Logging`, `ActionCore`, and `Targets` should move into directories later. Do this only if it improves navigation and update `.vcxproj`/compile database afterward.
+- Keep extending pure tests as new branch decisions move out of runtime code.
