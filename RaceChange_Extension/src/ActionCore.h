@@ -18,6 +18,15 @@ enum RaceChangeIntent
 	RACE_CHANGE_INTENT_UNSUPPORTED
 };
 
+/** High-level execution path selected after intent and template evidence are known. */
+enum RaceChangePath
+{
+	RACE_CHANGE_PATH_NONE = 0,
+	RACE_CHANGE_PATH_IN_PLACE_ARMOUR_ONLY,
+	RACE_CHANGE_PATH_IN_PLACE_FULL_INVENTORY,
+	RACE_CHANGE_PATH_ANIMAL_REPLACEMENT
+};
+
 /** Public FCS action key that targets the resolved dialogue speaker. */
 static const char* ACTION_CHANGE_RACE = "change race";
 
@@ -38,3 +47,9 @@ RaceChangeIntent GetRaceChangeIntent(int value);
 
 /** Convert an intent enum to a stable lowercase diagnostic string. */
 const char* RaceChangeIntentToString(RaceChangeIntent intent);
+
+/** Select the runtime path without touching Kenshi game state. */
+RaceChangePath SelectRaceChangePath(RaceChangeIntent intent, bool targetRaceHasAnimalTemplate);
+
+/** Convert a path enum to a stable lowercase diagnostic string. */
+const char* RaceChangePathToString(RaceChangePath path);

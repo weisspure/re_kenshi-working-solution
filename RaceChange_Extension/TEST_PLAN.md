@@ -79,6 +79,14 @@ Optional edge probes:
 - A subrace with no known editor limits file, in a disposable test mod only.
 - Root dialogue line vs child dialogue line, because dialogue identity differs by line position.
 
+## Refactor Regression Notes
+
+After the actions-directory refactor, repeat these dry runs before claiming runtime safety:
+
+- Humanoid to humanoid with armour equipped. Confirm armour is removed before `setRace`, inventory sections validate, armour restore uses `destroyOnFail=false`, and the editor opens for the same character.
+- Humanoid to animal with `value[0] == 1`, armour equipped, and backpack inventory. Confirm all inventory is dropped, the animal template is spawned, supported state is transferred, the editor opens for the spawned character, and source destruction happens after replacement.
+- Animal intent with no matching `ANIMAL_CHARACTER` template. Confirm fallback uses in-place mutation, evacuated inventory follows the full-inventory policy, and the source character is not destroyed.
+
 ## Evidence To Capture
 
 For each run, copy the relevant `RE_Kenshi.log` block into `RaceChangePOC/FINDINGS.md` or a project-local findings note.

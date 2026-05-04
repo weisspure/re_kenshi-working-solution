@@ -73,3 +73,29 @@ BOOST_AUTO_TEST_CASE(log_level_filtering_emits_only_threshold_and_above)
 	BOOST_CHECK(ShouldLogRaceChangeMessage(RACE_CHANGE_LOG_ERROR, RACE_CHANGE_LOG_ERROR));
 	BOOST_CHECK(!ShouldLogRaceChangeMessage(RACE_CHANGE_LOG_ERROR, RACE_CHANGE_LOG_WARNING));
 }
+
+BOOST_AUTO_TEST_CASE(animal_intent_with_template_uses_animal_replacement_path)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_PATH_ANIMAL_REPLACEMENT, SelectRaceChangePath(RACE_CHANGE_INTENT_ANIMAL, true));
+}
+
+BOOST_AUTO_TEST_CASE(animal_intent_without_template_falls_back_to_in_place_full_inventory_path)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_PATH_IN_PLACE_FULL_INVENTORY, SelectRaceChangePath(RACE_CHANGE_INTENT_ANIMAL, false));
+}
+
+BOOST_AUTO_TEST_CASE(humanoid_intent_with_animal_template_uses_in_place_full_inventory_pivot)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_PATH_IN_PLACE_FULL_INVENTORY, SelectRaceChangePath(RACE_CHANGE_INTENT_HUMANOID, true));
+}
+
+BOOST_AUTO_TEST_CASE(humanoid_intent_without_animal_template_uses_armour_only_in_place_path)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_PATH_IN_PLACE_ARMOUR_ONLY, SelectRaceChangePath(RACE_CHANGE_INTENT_HUMANOID, false));
+}
+
+BOOST_AUTO_TEST_CASE(unsupported_intent_has_no_race_change_path)
+{
+	BOOST_CHECK_EQUAL(RACE_CHANGE_PATH_NONE, SelectRaceChangePath(RACE_CHANGE_INTENT_UNSUPPORTED, true));
+	BOOST_CHECK_EQUAL(RACE_CHANGE_PATH_NONE, SelectRaceChangePath(RACE_CHANGE_INTENT_UNSUPPORTED, false));
+}
